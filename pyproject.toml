@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tb3_nav"
+version = "0.1.0"
+description = "Nawigacja TurtleBot3 Waffle Pi z RL w MuJoCo + ROS 2"
+requires-python = ">=3.10"
+dependencies = ["mujoco>=3.3.6", "gymnasium>=1.0", "numpy"]
+
+[tool.setuptools.packages.find]
+include = ["tb3_nav*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

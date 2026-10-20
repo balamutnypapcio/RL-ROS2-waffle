@@ -1,0 +1,153 @@
+<!-- GENERATED from make_lidar.py from turtlebot3_waffle_pi.xml (ROBOTIS, Apache-2.0). Do not edite manually. -->
+<mujoco model="turtlebot3_waffle_pi_lidar">
+  <compiler angle="radian" meshdir="assets/"/>
+
+  <option cone="elliptic" impratio="10"/>
+
+  <asset>
+    <material name="grey" rgba="0.3 0.3 0.3 1"/>
+    <material name="black" rgba="0.1 0.1 0.1 1"/>
+
+    <mesh name="waffle_pi_base" file="waffle_pi_base.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="left_tire" file="left_tire.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="right_tire" file="right_tire.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="lds" file="lds.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
+  <default>
+    <!-- Wheel motor -->
+    <default class="wheel">
+      <joint limited="false" frictionloss="0.1" armature="0.01"/>
+      <velocity kv="1.0" ctrlrange="-7.88 7.88" ctrllimited="true"/>
+      <default class="wheel_left">
+        <joint axis="0 0 1"/>
+      </default>
+      <default class="wheel_right">
+        <joint axis="0 0 1"/>
+      </default>
+    </default>
+    <!-- Visual / Collision -->
+    <default class="visual">
+      <geom type="mesh" contype="0" conaffinity="0" density="0" group="2"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <body name="base" pos="0 0 0">
+      <inertial pos="-0.064 0 0.06" mass="1.8" diaginertia="0.01 0.01 0.008"/>
+      <joint type="free" name="base_joint"/>
+      <geom pos="-0.064 0 0.01" mesh="waffle_pi_base" material="black" class="visual"/>
+      <geom name="base_col" type="box" pos="-0.0598 0 0.067" size="0.137 0.139 0.052" group="3"/>
+      <geom size="0.005" pos="-0.177 -0.064 0.005" type="sphere" material="grey" friction="0.0001 0.0001 0.0001" solref="0.02 1" solimp="0.95 0.99 0.001" condim="1"/>
+      <geom size="0.005" pos="-0.177 0.064 0.005" type="sphere" material="grey" friction="0.0001 0.0001 0.0001" solref="0.02 1" solimp="0.95 0.99 0.001" condim="1"/>
+      <geom pos="-0.049 0 0.1255" mesh="lds" material="black" class="visual"/>
+      <geom name="lds_col" type="cylinder" pos="-0.035 0 0.115" size="0.035 0.02" group="3"/>
+      <geom size="0.0075 0.015 0.0135" pos="0.078 0 0.107" type="box" material="grey"/>
+      <!-- 2D LiDAR: 36 directions, kat 0 = front of the robot (+x), rise in left -->
+      <site name="lidar_000" pos="-0.049 0 0.15" zaxis="1.000000 0.000000 0" size="0.005" group="4"/>
+      <site name="lidar_001" pos="-0.049 0 0.15" zaxis="0.984808 0.173648 0" size="0.005" group="4"/>
+      <site name="lidar_002" pos="-0.049 0 0.15" zaxis="0.939693 0.342020 0" size="0.005" group="4"/>
+      <site name="lidar_003" pos="-0.049 0 0.15" zaxis="0.866025 0.500000 0" size="0.005" group="4"/>
+      <site name="lidar_004" pos="-0.049 0 0.15" zaxis="0.766044 0.642788 0" size="0.005" group="4"/>
+      <site name="lidar_005" pos="-0.049 0 0.15" zaxis="0.642788 0.766044 0" size="0.005" group="4"/>
+      <site name="lidar_006" pos="-0.049 0 0.15" zaxis="0.500000 0.866025 0" size="0.005" group="4"/>
+      <site name="lidar_007" pos="-0.049 0 0.15" zaxis="0.342020 0.939693 0" size="0.005" group="4"/>
+      <site name="lidar_008" pos="-0.049 0 0.15" zaxis="0.173648 0.984808 0" size="0.005" group="4"/>
+      <site name="lidar_009" pos="-0.049 0 0.15" zaxis="0.000000 1.000000 0" size="0.005" group="4"/>
+      <site name="lidar_010" pos="-0.049 0 0.15" zaxis="-0.173648 0.984808 0" size="0.005" group="4"/>
+      <site name="lidar_011" pos="-0.049 0 0.15" zaxis="-0.342020 0.939693 0" size="0.005" group="4"/>
+      <site name="lidar_012" pos="-0.049 0 0.15" zaxis="-0.500000 0.866025 0" size="0.005" group="4"/>
+      <site name="lidar_013" pos="-0.049 0 0.15" zaxis="-0.642788 0.766044 0" size="0.005" group="4"/>
+      <site name="lidar_014" pos="-0.049 0 0.15" zaxis="-0.766044 0.642788 0" size="0.005" group="4"/>
+      <site name="lidar_015" pos="-0.049 0 0.15" zaxis="-0.866025 0.500000 0" size="0.005" group="4"/>
+      <site name="lidar_016" pos="-0.049 0 0.15" zaxis="-0.939693 0.342020 0" size="0.005" group="4"/>
+      <site name="lidar_017" pos="-0.049 0 0.15" zaxis="-0.984808 0.173648 0" size="0.005" group="4"/>
+      <site name="lidar_018" pos="-0.049 0 0.15" zaxis="-1.000000 0.000000 0" size="0.005" group="4"/>
+      <site name="lidar_019" pos="-0.049 0 0.15" zaxis="-0.984808 -0.173648 0" size="0.005" group="4"/>
+      <site name="lidar_020" pos="-0.049 0 0.15" zaxis="-0.939693 -0.342020 0" size="0.005" group="4"/>
+      <site name="lidar_021" pos="-0.049 0 0.15" zaxis="-0.866025 -0.500000 0" size="0.005" group="4"/>
+      <site name="lidar_022" pos="-0.049 0 0.15" zaxis="-0.766044 -0.642788 0" size="0.005" group="4"/>
+      <site name="lidar_023" pos="-0.049 0 0.15" zaxis="-0.642788 -0.766044 0" size="0.005" group="4"/>
+      <site name="lidar_024" pos="-0.049 0 0.15" zaxis="-0.500000 -0.866025 0" size="0.005" group="4"/>
+      <site name="lidar_025" pos="-0.049 0 0.15" zaxis="-0.342020 -0.939693 0" size="0.005" group="4"/>
+      <site name="lidar_026" pos="-0.049 0 0.15" zaxis="-0.173648 -0.984808 0" size="0.005" group="4"/>
+      <site name="lidar_027" pos="-0.049 0 0.15" zaxis="-0.000000 -1.000000 0" size="0.005" group="4"/>
+      <site name="lidar_028" pos="-0.049 0 0.15" zaxis="0.173648 -0.984808 0" size="0.005" group="4"/>
+      <site name="lidar_029" pos="-0.049 0 0.15" zaxis="0.342020 -0.939693 0" size="0.005" group="4"/>
+      <site name="lidar_030" pos="-0.049 0 0.15" zaxis="0.500000 -0.866025 0" size="0.005" group="4"/>
+      <site name="lidar_031" pos="-0.049 0 0.15" zaxis="0.642788 -0.766044 0" size="0.005" group="4"/>
+      <site name="lidar_032" pos="-0.049 0 0.15" zaxis="0.766044 -0.642788 0" size="0.005" group="4"/>
+      <site name="lidar_033" pos="-0.049 0 0.15" zaxis="0.866025 -0.500000 0" size="0.005" group="4"/>
+      <site name="lidar_034" pos="-0.049 0 0.15" zaxis="0.939693 -0.342020 0" size="0.005" group="4"/>
+      <site name="lidar_035" pos="-0.049 0 0.15" zaxis="0.984808 -0.173648 0" size="0.005" group="4"/>
+      <site name="imu" pos="-0.032 0 0.068" size="0.01" group="4"/>
+      <body name="wheel_left" pos="0 0.144 0.033" quat="0.707388 -0.706825 0 0">
+        <inertial pos="0 0 0" quat="-0.000890159 0.706886 0.000889646 0.707326" mass="0.0284989" diaginertia="2.07126e-05 1.11924e-05 1.11756e-05"/>
+        <joint name="wheel_left" class="wheel_left"/>
+        <geom quat="0.707388 0.706825 0 0" mesh="left_tire" material="grey" class="visual"/>
+        <geom name="wheel_left_col" type="cylinder" size="0.033 0.009" friction="2 0.005 0.0001" group="3"/>
+      </body>
+      <body name="wheel_right" pos="0 -0.144 0.033" quat="0.707388 -0.706825 0 0">
+        <inertial pos="0 0 0" quat="-0.000890159 0.706886 0.000889646 0.707326" mass="0.0284989" diaginertia="2.07126e-05 1.11924e-05 1.11756e-05"/>
+        <joint name="wheel_right" class="wheel_right"/>
+        <geom quat="0.707388 0.706825 0 0" mesh="right_tire" material="grey" class="visual"/>
+        <geom name="wheel_right_col" type="cylinder" size="0.033 0.009" friction="2 0.005 0.0001" group="3"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <velocity class="wheel_left" name="wheel_left" joint="wheel_left"/>
+    <velocity class="wheel_right" name="wheel_right" joint="wheel_right"/>
+  </actuator>
+
+  <contact>
+    <exclude body1="base" body2="wheel_left"/>
+    <exclude body1="base" body2="wheel_right"/>
+  </contact>
+  <sensor>
+    <rangefinder name="lidar_000" site="lidar_000"/>
+    <rangefinder name="lidar_001" site="lidar_001"/>
+    <rangefinder name="lidar_002" site="lidar_002"/>
+    <rangefinder name="lidar_003" site="lidar_003"/>
+    <rangefinder name="lidar_004" site="lidar_004"/>
+    <rangefinder name="lidar_005" site="lidar_005"/>
+    <rangefinder name="lidar_006" site="lidar_006"/>
+    <rangefinder name="lidar_007" site="lidar_007"/>
+    <rangefinder name="lidar_008" site="lidar_008"/>
+    <rangefinder name="lidar_009" site="lidar_009"/>
+    <rangefinder name="lidar_010" site="lidar_010"/>
+    <rangefinder name="lidar_011" site="lidar_011"/>
+    <rangefinder name="lidar_012" site="lidar_012"/>
+    <rangefinder name="lidar_013" site="lidar_013"/>
+    <rangefinder name="lidar_014" site="lidar_014"/>
+    <rangefinder name="lidar_015" site="lidar_015"/>
+    <rangefinder name="lidar_016" site="lidar_016"/>
+    <rangefinder name="lidar_017" site="lidar_017"/>
+    <rangefinder name="lidar_018" site="lidar_018"/>
+    <rangefinder name="lidar_019" site="lidar_019"/>
+    <rangefinder name="lidar_020" site="lidar_020"/>
+    <rangefinder name="lidar_021" site="lidar_021"/>
+    <rangefinder name="lidar_022" site="lidar_022"/>
+    <rangefinder name="lidar_023" site="lidar_023"/>
+    <rangefinder name="lidar_024" site="lidar_024"/>
+    <rangefinder name="lidar_025" site="lidar_025"/>
+    <rangefinder name="lidar_026" site="lidar_026"/>
+    <rangefinder name="lidar_027" site="lidar_027"/>
+    <rangefinder name="lidar_028" site="lidar_028"/>
+    <rangefinder name="lidar_029" site="lidar_029"/>
+    <rangefinder name="lidar_030" site="lidar_030"/>
+    <rangefinder name="lidar_031" site="lidar_031"/>
+    <rangefinder name="lidar_032" site="lidar_032"/>
+    <rangefinder name="lidar_033" site="lidar_033"/>
+    <rangefinder name="lidar_034" site="lidar_034"/>
+    <rangefinder name="lidar_035" site="lidar_035"/>
+    <framepos name="base_pos" objtype="body" objname="base"/>
+    <framequat name="base_quat" objtype="body" objname="base"/>
+    <velocimeter name="base_linvel" site="imu"/>
+    <gyro name="base_gyro" site="imu"/>
+  </sensor>
+</mujoco>

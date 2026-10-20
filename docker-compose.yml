@@ -1,0 +1,15 @@
+services:
+  ros_dev:
+    build: .
+    container_name: ros2_humble_dev
+    network_mode: host
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      # Mapujemy obecny folder z Twojego komputera do folderu /ros2_ws w Dockerze
+      - .:/ros2_ws
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    stdin_open: true # odpowiednik -i
+    tty: true        # odpowiednik -t
