@@ -1,2 +1,6 @@
 .venv/
-src/__pycache__/
+__pycache__/
+*.pyc
+
+# LiDAR logs written by show_layout.py --log-mode file
+lidar_data.txt
