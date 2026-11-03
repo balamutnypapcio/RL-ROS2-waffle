@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: tb3_nav
+Version: 0.1.0
+Summary: Nawigacja TurtleBot3 Waffle Pi z RL w MuJoCo + ROS 2
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: mujoco>=3.3.6
+Requires-Dist: gymnasium>=1.0
+Requires-Dist: numpy
+Dynamic: license-file
