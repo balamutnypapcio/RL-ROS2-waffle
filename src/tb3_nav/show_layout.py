@@ -7,11 +7,11 @@ Connects the parts:
     controller.py        -> robot control (keyboard, later RL)
     logger.py            -> LiDAR scans to the terminal or a file
 
-Usage:
-    python src/make_scene.py --grid 8 --cell 0.5
-    python src/show_layout.py --mode random --obstacles 12
-    python src/show_layout.py --mode maze
-    python src/show_layout.py --fov 360 --rays 36 --log-mode terminal
+Usage (same as: python -m tb3_nav.show_layout ...):
+    tb3-make-scene --grid 10 --cell 0.5
+    tb3-show --mode random --obstacles 12
+    tb3-show --mode maze
+    tb3-show --fov 360 --rays 36 --log-mode terminal
 
 Keys (click the viewer window first):
     N       - new random layout
@@ -26,11 +26,11 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 
-from controller import RobotController
-from layout_generator import MODES, WALL, Layout, generate_layout, layout_to_str
-from lidar import Lidar
-from logger import DataLogger
-from make_scene import MODEL_DIR, PARKING_POS, cell_center
+from tb3_nav.controller import RobotController
+from tb3_nav.layout_generator import MODES, WALL, Layout, generate_layout, layout_to_str
+from tb3_nav.lidar import Lidar
+from tb3_nav.logger import DataLogger
+from tb3_nav.make_scene import MODEL_DIR, PARKING_POS, cell_center
 
 KEY_N = 78  # GLFW key code of 'N'
 

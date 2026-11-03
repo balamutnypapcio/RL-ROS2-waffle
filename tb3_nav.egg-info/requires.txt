@@ -1,3 +1,0 @@
-mujoco>=3.3.6
-gymnasium>=1.0
-numpy

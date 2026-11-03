@@ -1,0 +1,77 @@
+{
+  "args": {
+    "timesteps": 2000000,
+    "n_envs": 4,
+    "seed": 0,
+    "run_name": null,
+    "out": "/home/jakub/RL-ROS2-waffle/runs",
+    "save_freq": 50000,
+    "eval_freq": 100000,
+    "eval_episodes": 10
+  },
+  "stages": [
+    {
+      "mode": "random",
+      "n_obstacles": [
+        0,
+        3
+      ],
+      "min_dist_cells": 2
+    },
+    {
+      "mode": "random",
+      "n_obstacles": [
+        3,
+        8
+      ],
+      "min_dist_cells": 3
+    },
+    {
+      "mode": "random",
+      "n_obstacles": [
+        8,
+        15
+      ],
+      "min_dist_cells": 5
+    },
+    {
+      "mode": [
+        "random",
+        "rooms",
+        "maze"
+      ],
+      "n_obstacles": [
+        8,
+        15
+      ],
+      "min_dist_cells": 5,
+      "max_steps": 1500
+    }
+  ],
+  "curriculum_threshold": 0.7,
+  "curriculum_window": 100,
+  "ppo": {
+    "learning_rate": 0.0003,
+    "n_steps": 2048,
+    "batch_size": 256,
+    "n_epochs": 10,
+    "gamma": 0.995,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.005,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "policy_kwargs": {
+      "net_arch": {
+        "pi": [
+          256,
+          256
+        ],
+        "vf": [
+          256,
+          256
+        ]
+      }
+    }
+  }
+}

@@ -1,8 +1,0 @@
-LICENSE
-README.md
-pyproject.toml
-tb3_nav.egg-info/PKG-INFO
-tb3_nav.egg-info/SOURCES.txt
-tb3_nav.egg-info/dependency_links.txt
-tb3_nav.egg-info/requires.txt
-tb3_nav.egg-info/top_level.txt

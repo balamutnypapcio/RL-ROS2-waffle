@@ -1,6 +1,12 @@
 .venv/
 __pycache__/
 *.pyc
-*egg/
+.pytest_cache/
+*.egg-info/
+build/
 # LiDAR logs written by show_layout.py --log-mode file
 lidar_data.txt
+
+# Training output of train_ppo.py: runs/<name>/ goes to git (models ~2 MB each, plots,
+# TensorBoard logs, config), only the many checkpoints are left out (~2 MB each, dozens per run)
+runs/*/checkpoints/
