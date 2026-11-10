@@ -41,6 +41,9 @@ STAGES = [
     dict(mode="random", n_obstacles=(0, 3), min_dist_cells=2),
     dict(mode="random", n_obstacles=(3, 8), min_dist_cells=3),
     dict(mode="random", n_obstacles=(8, 15), min_dist_cells=5),
+    # rooms: full walls with 1-cell doors, the goal is often in another room
+    dict(mode=("random", "rooms"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
+
     # maze paths reach ~18 m (~70 s at full speed), so episodes need more steps
     dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
 ]
@@ -167,7 +170,7 @@ def main() -> None:
 
     # Separate env for evaluation on the target task (last stage),
     # different seed so it sees other maps than training
-    eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[-1])
+    eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[3])
 
     # Callbacks count calls of env.step() on the VecEnv, one call = n_envs env steps,
     # so the frequencies are divided by n_envs to stay in env steps.

@@ -189,8 +189,9 @@ class NavEnv(gym.Env):
     def _compute_reward(self) -> float:
         """Reward for the last step."""
         dist = self._goal_dist()
-        reward = PROGRESS_SCALE * (self.prev_goal_dist - dist) + TIME_PENALTY + self._proximity_penalty()
-        self.prev_goal_dist = dist
+        progress = max(0.0, self.prev_goal_dist - dist)
+        self.prev_goal_dist = min(self.prev_goal_dist, dist)
+        reward = PROGRESS_SCALE * progress + TIME_PENALTY + self._proximity_penalty()
         if self._goal_reached():
             reward += GOAL_REWARD
         elif self._collided():
