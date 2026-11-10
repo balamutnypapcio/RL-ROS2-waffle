@@ -5,11 +5,32 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tb3_nav"
 version = "0.1.0"
-description = "Nawigacja TurtleBot3 Waffle Pi z RL w MuJoCo + ROS 2"
+description = "Navigation TurtleBot3 Waffle Pi with RL in MuJoCo + ROS 2"
+readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["mujoco>=3.3.6", "gymnasium>=1.0", "numpy"]
+dependencies = [
+    "mujoco>=3.3.6",
+    "gymnasium>=1.0",
+    "numpy>=1.24",
+    "stable-baselines3>=2.4",   # first version that supports gymnasium 1.0
+    "tensorboard>=2.10",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+# Commands available after `pip install -e .`
+[project.scripts]
+tb3-make-scene = "tb3_nav.make_scene:main"
+tb3-layouts = "tb3_nav.layout_generator:main"
+tb3-show = "tb3_nav.show_layout:main"
+tb3-train = "tb3_nav.train_ppo:main"
+tb3-plot = "tb3_nav.plot_run:main"
+tb3-play = "tb3_nav.play_model:main"
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["tb3_nav*"]
 
 [tool.pytest.ini_options]

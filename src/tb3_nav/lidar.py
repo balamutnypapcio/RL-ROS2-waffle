@@ -11,7 +11,7 @@ import mujoco
 
 
 MAX_RANGE = 1.5  # meters
-NO_HIT = -1.0    # returned for rays that hit nothing within max_range
+NO_HIT = MAX_RANGE    # returned for rays that hit nothing within max_range, NO_HIT = MAX_RANGE for better PPO training 
 
 # Scanner axis in the frame of the robot body "base": the origin of the 'lds' mesh
 # in turtlebot3_waffle_pi.xml (geom pos="-0.049 0 0.1255"). The LDS housing spans
@@ -70,3 +70,6 @@ class Lidar:
         if return_points:
             return distances, points
         return distances
+
+    def get_max_range(self) -> float:
+        return self.max_range

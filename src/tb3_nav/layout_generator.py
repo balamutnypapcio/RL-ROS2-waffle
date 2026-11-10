@@ -14,8 +14,9 @@ Later, at every env reset:
     for each WALL cell -> move one block from the pool to cell_center(row, col)
     park the remaining blocks, place the robot at start and the goal marker at goal.
 
-Usage (when finished), to look at maps in the terminal:
-    python layout_generator.py --grid 8 --mode random --obstacles 12 --count 3 --seed 0
+Usage, to look at maps in the terminal:
+    tb3-layouts --grid 8 --mode random --obstacles 12 --count 3 --seed 0
+    (same as: python -m tb3_nav.layout_generator ...)
 """
 import argparse
 from collections import deque

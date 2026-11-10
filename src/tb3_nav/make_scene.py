@@ -10,8 +10,8 @@ The scene contains:
 This script only builds the "warehouse of blocks". Arranging the blocks into an
 actual map happens later, in Python, at every reset (by moving mocap bodies).
 
-Usage (when finished):
-    python make_scene.py --grid 8 --cell 0.5 --out models/scene_grid.xml
+Usage:
+    tb3-make-scene --grid 10 --cell 0.5        (same as: python -m tb3_nav.make_scene ...)
     python -m mujoco.viewer --mjcf models/scene_grid.xml
 """
 import argparse
@@ -27,7 +27,7 @@ PARKING_POS = (100.0, 100.0, -1.0)
 WALL_THICKNESS = 0.1    # full thickness of the outer walls [m]
 GOAL_RADIUS = 0.15      # radius of the goal marker (visual only) [m]
 
-ROOT = Path(__file__).resolve().parent.parent   # project/
+ROOT = Path(__file__).resolve().parents[2]   # project/ (this file is project/src/tb3_nav/make_scene.py)
 MODEL_DIR = ROOT / "models"
 
 # --------------------------------------------------------------------------- #
