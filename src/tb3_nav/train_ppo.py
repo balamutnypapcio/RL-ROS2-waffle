@@ -115,6 +115,38 @@ class CurriculumCallback(BaseCallback):
         return True
 
 
+class EpisodeStatsCallback(BaseCallback):
+    """Logs how the recent training episodes ended.
+
+    Logged to TensorBoard (over the last `window` finished episodes):
+        episode/collision_rate     share of episodes that ended with a collision
+        episode/timeout_rate       share of episodes that ran out of steps
+        episode/min_obstacle_dist  mean of the closest distance to an obstacle per episode [m]
+    """
+
+    def __init__(self, window: int, verbose: int = 0):
+        super().__init__(verbose)
+        self.outcomes = deque(maxlen=window)       # "goal" / "collision" / "timeout" per episode
+        self.min_dists = deque(maxlen=window)      # closest obstacle distance per episode
+
+    def _on_step(self) -> bool:
+        for done, info in zip(self.locals["dones"], self.locals["infos"]):
+            if done:
+                self.outcomes.append(info["outcome"])
+                self.min_dists.append(info["min_obstacle_dist"])
+
+        if self.outcomes:
+            collision_rate = np.mean([o == "collision" for o in self.outcomes])
+            timeout_rate = np.mean([o == "timeout" for o in self.outcomes])
+            self.logger.record("episode/collision_rate", float(collision_rate))
+            self.logger.record("episode/timeout_rate", float(timeout_rate))
+            self.logger.record("episode/min_obstacle_dist", float(np.mean(self.min_dists)))
+        return True
+
+
+
+
+
 def main() -> None:
     args = parse_args()
     run_name = args.run_name or datetime.now().strftime("ppo_%Y%m%d_%H%M%S")
@@ -148,6 +180,7 @@ def main() -> None:
                      deterministic=True,
                      warn=False),   # train env is Subproc, eval env Dummy - that's fine here
         CurriculumCallback(STAGES, threshold=CURRICULUM_THRESHOLD, window=CURRICULUM_WINDOW),
+        EpisodeStatsCallback(window=CURRICULUM_WINDOW),
     ]
 
     model = PPO(

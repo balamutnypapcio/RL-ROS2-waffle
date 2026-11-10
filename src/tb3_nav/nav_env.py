@@ -19,19 +19,22 @@ from gymnasium import spaces
 
 from tb3_nav.controller import RobotController
 from tb3_nav.layout_generator import generate_layout
-from tb3_nav.lidar import Lidar
+from tb3_nav.lidar import MAX_RANGE, Lidar
 from tb3_nav.make_scene import MODEL_DIR
 from tb3_nav.show_layout import LayoutPlacer
 from tb3_nav.geometry import goal_distance_angle
 
-FRAME_SKIP = 25          # physics steps per env step (timestep 0.002 s -> 0.05 s per action)
+PHYSICS_TIMESTEP = 0.005  # seconds per physics step 
+FRAME_SKIP = 10          # physics steps per env step (timestep 10 x 0.005s = 0.05s per action)
 MAX_EPISODE_STEPS = 500  # env steps before truncation
 GOAL_OFFSET = 0.2
-COLLISION_DIST = 0.2
+SAFE_DIST = 0.25          # [m] LiDAR distance below which the proximity penalty starts 
+MIN_DIST = 0.15           # [m] LiDAR distance at which the penalty is full 
+PROXIMITY_PENALTY = -0.1  # reward per step at MIN_DIST or closer, scales linearly to 0 at SAFE_DIST
 PROGRESS_SCALE = 10
 TIME_PENALTY = -0.01
-GOAL_REWARD = 15
-COLLISION_PENALTY = -15
+GOAL_REWARD = 30
+COLLISION_PENALTY = -50
 
 
 class NavEnv(gym.Env):
@@ -51,6 +54,7 @@ class NavEnv(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(str(scene))
         self.data = mujoco.MjData(self.model)
 
+        self.model.opt.timestep = PHYSICS_TIMESTEP
         self.placer = LayoutPlacer(self.model)
         self.lidar = Lidar(self.model, fov_deg=fov_deg, n_rays=n_rays)
         self.controller = RobotController(self.model, mode="rl")
@@ -62,6 +66,20 @@ class NavEnv(gym.Env):
         self.robot_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "base")
         self.robot_wheel_ids = tuple(mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, name)
                   for name in ("wheel_left", "wheel_right"))
+
+
+        # Geoms for collision checks -- change from distance to mujoco collisions
+        # robot = every geom of the robot's body tree -- base and wheels
+        # obstacle = outer walls and stuff
+        self.robot_geoms = set()
+        self.obstacle_geoms = set()
+        for g in range(self.model.ngeom):
+            body = self.model.geom_bodyid[g]
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
+            if self.model.body_rootid[body] == self.robot_body_id:
+                self.robot_geoms.add(g)
+            elif name.startswith(("wall_", "block_")):
+                self.obstacle_geoms.add(g)
 
         # Normalized action, scaled in _apply_action
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
@@ -76,6 +94,10 @@ class NavEnv(gym.Env):
         self.steps = 0
         self.prev_goal_dist = 0.0
         self.last_scan = np.zeros(n_rays)
+        self.outcome = None
+        self.min_obstacle_dist = MAX_RANGE  # distance to the closest obstacle, updated in step()
+        self.collided = False 
+
 
     # -------------------------- Gymnasium API -------------------------------------------
 
@@ -93,19 +115,31 @@ class NavEnv(gym.Env):
         self.goal_xy = self.data.mocap_pos[self.placer.goal_mocap][:2].copy()
         self.steps = 0
         self.prev_goal_dist = self._goal_dist()
+        self.outcome = None
+        self.min_obstacle_dist = MAX_RANGE
 
         return self._get_obs(), self._get_info()
 
     def step(self, action: np.ndarray):
         self._apply_action(action)
+        self.collided = False
         for _ in range(FRAME_SKIP):
             mujoco.mj_step(self.model, self.data)
+            if self._touching_obstacle():
+                self.collided = True
         self.steps += 1
 
         obs = self._get_obs()
         reward = self._compute_reward()
         terminated = self._is_terminated()
         truncated = self.steps >= self.max_steps
+        self.min_obstacle_dist = min(self.min_obstacle_dist, self.last_scan.min())
+        if terminated:
+            self.outcome = "goal" if self._goal_reached() else "collision"
+        elif truncated:
+            self.outcome = "timeout"
+        else:
+            self.outcome = None
 
         return obs, reward, terminated, truncated, self._get_info()
 
@@ -155,13 +189,22 @@ class NavEnv(gym.Env):
     def _compute_reward(self) -> float:
         """Reward for the last step."""
         dist = self._goal_dist()
-        reward = PROGRESS_SCALE * (self.prev_goal_dist - dist) + TIME_PENALTY
+        reward = PROGRESS_SCALE * (self.prev_goal_dist - dist) + TIME_PENALTY + self._proximity_penalty()
         self.prev_goal_dist = dist
         if self._goal_reached():
             reward += GOAL_REWARD
         elif self._collided():
             reward += COLLISION_PENALTY
         return reward
+
+    def _proximity_penalty(self) -> float:
+        """Negative reward for being close to an obstacle, 0 when farther than SAFE_DIST."""
+        closest = float(self.last_scan.min())
+        closeness = (SAFE_DIST - closest) / (SAFE_DIST - MIN_DIST)   # 0 at SAFE_DIST, 1 at MIN_DIST
+        closeness = float(np.clip(closeness, 0.0, 1.0))
+        return PROXIMITY_PENALTY * closeness
+
+    
 
     def _is_terminated(self) -> bool:
         """True when the episode ends by itself: goal reached or collision."""
@@ -170,13 +213,29 @@ class NavEnv(gym.Env):
     def _get_info(self) -> dict:
         """Extra data for debugging / evaluation (not seen by the policy)."""
         # "is_success" is read by SB3 (EvalCallback -> eval/success_rate) and by the curriculum
-        return {"steps": self.steps, "is_success": self._goal_reached()}
+        return {"steps": self.steps,
+                "is_success": self._goal_reached(),
+                "outcome": self.outcome,
+                "min_obstacle_dist": self.min_obstacle_dist}
 
     def _goal_reached(self) -> bool:
         return self._goal_dist() <= GOAL_OFFSET
 
     def _collided(self) -> bool:
-        return self.last_scan.min() <= COLLISION_DIST
+        """True if the robot touched a wall or block during the last step (set in step())."""
+        return self.collided
+
+    def _touching_obstacle(self) -> bool:
+        """True if MuJoCo reports a contact between the robot and a wall / block right now."""
+        for i in range(self.data.ncon):
+            contact = self.data.contact[i]
+            g1, g2 = contact.geom1, contact.geom2
+            if ((g1 in self.robot_geoms and g2 in self.obstacle_geoms)
+                    or (g2 in self.robot_geoms and g1 in self.obstacle_geoms)):
+                return True
+        return False
+
+
 
     def _goal_dist(self) -> float:
         robot_xy, robot_yaw = self._robot_pose()
