@@ -87,3 +87,12 @@ def test_close_to_a_block_is_penalized_but_not_a_collision():
     assert info["outcome"] is None
     assert env._proximity_penalty() < 0
     assert reward < TIME_PENALTY       # worse than just standing far from walls
+
+def test_observation_has_gap_from_best_distance():
+    env = NavEnv()
+    obs, _ = env.reset(seed=0)
+    assert obs[-1] == 0.0                       # at the start the robot is at its record
+
+    env.prev_goal_dist = env._goal_dist() - 0.5   # pretend the robot was once 0.5 m closer
+    obs = env._get_obs()
+    assert obs[-1] == pytest.approx(0.5 / env.max_goal_dist)

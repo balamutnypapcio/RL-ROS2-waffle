@@ -32,7 +32,7 @@ SAFE_DIST = 0.25          # [m] LiDAR distance below which the proximity penalty
 MIN_DIST = 0.15           # [m] LiDAR distance at which the penalty is full 
 PROXIMITY_PENALTY = -0.1  # reward per step at MIN_DIST or closer, scales linearly to 0 at SAFE_DIST
 PROGRESS_SCALE = 10
-TIME_PENALTY = -0.03
+TIME_PENALTY = -0.01
 GOAL_REWARD = 30
 COLLISION_PENALTY = -50
 
@@ -85,7 +85,8 @@ class NavEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
 
         # Observation size and bounds to match what _get_obs returns
-        obs_size = n_rays  + 3 + 2   # n_rays + distance from goal + sin(a) + cos(a) + robot velocity + robot angle velocity
+        obs_size = n_rays  + 3 + 2 + 1  # n_rays + distance from goal + sin(a) + cos(a) + robot velocity 
+                                        # + robot angle velocity + gap from the best distance
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(obs_size,), dtype=np.float32)
 
         # Episode state, filled in reset()
@@ -177,6 +178,7 @@ class NavEnv(gym.Env):
         sin = np.sin(angle)
         cos = np.cos(angle)
         normalized_distance = distance / self.max_goal_dist
+        gap_from_best = max(0.0, distance - self.prev_goal_dist) / self.max_goal_dist #memory -- how much further form the  goal than the best distance so far
 
         w_left_omega = self.data.joint(self.robot_wheel_ids[0]).qvel[0]
         w_right_omega = self.data.joint(self.robot_wheel_ids[1]).qvel[0]
@@ -184,7 +186,7 @@ class NavEnv(gym.Env):
         omega = self.controller.wheel_radius * (w_right_omega - w_left_omega) / self.controller.wheel_separation
         v = v / self.controller.max_speed
         omega = omega / self.controller.max_turn
-        return np.concatenate([lidar_scan,[v, omega], [normalized_distance, sin, cos]]).astype(np.float32)
+        return np.concatenate([lidar_scan,[v, omega], [normalized_distance, sin, cos, gap_from_best]]).astype(np.float32)
 
     def _compute_reward(self) -> float:
         """Reward for the last step."""
