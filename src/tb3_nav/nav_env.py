@@ -30,9 +30,9 @@ MAX_EPISODE_STEPS = 500  # env steps before truncation
 GOAL_OFFSET = 0.2
 SAFE_DIST = 0.25          # [m] LiDAR distance below which the proximity penalty starts 
 MIN_DIST = 0.15           # [m] LiDAR distance at which the penalty is full 
-PROXIMITY_PENALTY = -0.01  # reward per step at MIN_DIST or closer, scales linearly to 0 at SAFE_DIST
+PROXIMITY_PENALTY = -0.1  # reward per step at MIN_DIST or closer, scales linearly to 0 at SAFE_DIST
 PROGRESS_SCALE = 10
-TIME_PENALTY = -0.01
+TIME_PENALTY = -0.03
 GOAL_REWARD = 30
 COLLISION_PENALTY = -50
 
