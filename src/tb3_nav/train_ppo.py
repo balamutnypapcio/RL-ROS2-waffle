@@ -168,7 +168,7 @@ def main() -> None:
     train_env = make_vec_env(NavEnv, n_envs=args.n_envs, seed=args.seed,
                              env_kwargs=STAGES[0], vec_env_cls=vec_env_cls)
 
-    # Separate env for evaluation on the target task (last stage),
+    # Separate env for evaluation on the target task,
     # different seed so it sees other maps than training
     eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[3])
 
