@@ -9,8 +9,8 @@ Every run gets its own folder:
         config.json      all settings of the run (args, curriculum, PPO hyperparameters)
         plots/training.png, metrics.csv   training curves (plot_run.py, made at the end)
 
-Curriculum: training starts on STAGES[0] and moves to the next stage when the success rate
-of the last CURRICULUM_WINDOW training episodes reaches CURRICULUM_THRESHOLD.
+Curriculum: training starts on STAGES[0] and moves to the next stage when the recent success rate 
+is above CURRICULUM_THRESHOLD (over the last CURRICULUM_WINDOW episodes).
 Evaluation always runs on the last stage (the target task), so eval/* is comparable over time.
 
 Usage (same as: python -m tb3_nav.train_ppo ...):
@@ -45,10 +45,10 @@ STAGES = [
     dict(mode=("random", "rooms"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
 
     # maze paths reach ~18 m (~70 s at full speed), so episodes need more steps
-    dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
+   # dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
 ]
-CURRICULUM_THRESHOLD = 0.7   # success rate needed to move to the next stage
-CURRICULUM_WINDOW = 100      # number of recent training episodes the success rate is computed from
+STAGE_STARTS = [0, 500_000, 1_000_000, 2_500_000] # Changed form 0.7 treshold for more comparable outcomes
+STATS_WINDOW = 100       # recent training episodes used for the logged success / outcome rates
 
 # PPO hyperparameters. Change one at a time and compare runs in TensorBoard
 # (every run saves its settings to runs/<run_name>/config.json).
@@ -95,25 +95,23 @@ class CurriculumCallback(BaseCallback):
         self.stages = stages
         self.threshold = threshold
         self.stage = 0
-        self.successes = deque(maxlen=window)   # 1.0 / 0.0 per finished episode, oldest drop out
+        self.successes = deque(maxlen=window)   # only for logging now
 
     def _on_step(self) -> bool:
         # A VecEnv resets finished envs by itself; info of the done step is still the last step's info
         for done, info in zip(self.locals["dones"], self.locals["infos"]):
             if done:
                 self.successes.append(float(info["is_success"]))
-
         if self.successes:
-            rate = float(np.mean(self.successes))
-            self.logger.record("curriculum/success_rate", rate)
-            # Wait for a full window, so a few lucky episodes don't move the stage
-            if (len(self.successes) == self.successes.maxlen and rate >= self.threshold
-                    and self.stage < len(self.stages) - 1):
-                self.stage += 1
-                self.training_env.env_method("set_difficulty", **self.stages[self.stage])
-                self.successes.clear()   # the new stage starts counting from zero
-                if self.verbose:
-                    print(f"\n[curriculum] success rate {rate:.0%} -> stage {self.stage}: {self.stages[self.stage]}")
+            self.logger.record("curriculum/success_rate", float(np.mean(self.successes)))
+
+        next_stage = self.stage + 1
+        if next_stage < len(self.stages) and self.num_timesteps >= self.starts[next_stage]:
+            self.stage = next_stage
+            self.training_env.env_method("set_difficulty", **self.stages[self.stage])
+            self.successes.clear()
+            if self.verbose:
+                print(f"\n[curriculum] step {self.num_timesteps} -> stage {self.stage}: {self.stages[self.stage]}")
         self.logger.record("curriculum/stage", self.stage)
         return True
 
@@ -158,8 +156,8 @@ def main() -> None:
     print(f"Run folder: {run_dir}")
 
     # Save all settings of this run, so runs can be compared and repeated later
-    config = dict(args=vars(args), stages=STAGES, curriculum_threshold=CURRICULUM_THRESHOLD,
-                  curriculum_window=CURRICULUM_WINDOW, ppo=PPO_KWARGS)
+    config = dict(args=vars(args), stages=STAGES, stage_starts=STAGE_STARTS, 
+                  stats_window=STATS_WINDOW, ppo=PPO_KWARGS)
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, default=str))
 
     # Training envs: each in its own process (MuJoCo + Python LiDAR are CPU-bound).
@@ -182,8 +180,8 @@ def main() -> None:
                      best_model_save_path=str(run_dir), log_path=str(run_dir / "eval"),
                      deterministic=True,
                      warn=False),   # train env is Subproc, eval env Dummy - that's fine here
-        CurriculumCallback(STAGES, threshold=CURRICULUM_THRESHOLD, window=CURRICULUM_WINDOW),
-        EpisodeStatsCallback(window=CURRICULUM_WINDOW),
+        CurriculumCallback(STAGES, starts=STAGE_STARTS, window=STATS_WINDOW),
+        EpisodeStatsCallback(window=STATS_WINDOW),
     ]
 
     model = PPO(

@@ -26,7 +26,7 @@ def test_reset_observation_in_bounds():
 def test_set_difficulty_used_from_next_reset():
     env = NavEnv(**STAGES[0])
     env.set_difficulty(**STAGES[-1])
-    assert env.modes == ("random", "rooms", "maze")
+    assert env.modes == tuple(STAGES[-1]["mode"]) 
     assert env.max_steps == STAGES[-1]["max_steps"]
     env.reset(seed=0)   # must not fail with the new settings
 
