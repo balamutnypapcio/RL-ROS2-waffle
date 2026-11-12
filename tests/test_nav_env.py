@@ -81,6 +81,7 @@ def test_close_to_a_block_is_penalized_but_not_a_collision():
     env.data.qvel[:] = 0
     mujoco.mj_forward(env.model, env.data)
     env.prev_goal_dist = env._goal_dist()
+    env.best_path_dist = env._path_dist()   # the teleport is not progress
 
     _, reward, terminated, _, info = env.step(np.zeros(2, dtype=np.float32))
     assert not terminated

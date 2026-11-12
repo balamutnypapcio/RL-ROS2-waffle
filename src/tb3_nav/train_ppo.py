@@ -9,8 +9,7 @@ Every run gets its own folder:
         config.json      all settings of the run (args, curriculum, PPO hyperparameters)
         plots/training.png, metrics.csv   training curves (plot_run.py, made at the end)
 
-Curriculum: training starts on STAGES[0] and moves to the next stage when the recent success rate 
-is above CURRICULUM_THRESHOLD (over the last CURRICULUM_WINDOW episodes).
+Curriculum: training starts on STAGES[0] and moves to the next stage when the specified number of timesteps has been reached.
 Evaluation always runs on the last stage (the target task), so eval/* is comparable over time.
 
 Usage (same as: python -m tb3_nav.train_ppo ...):
@@ -45,9 +44,9 @@ STAGES = [
     dict(mode=("random", "rooms"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
 
     # maze paths reach ~18 m (~70 s at full speed), so episodes need more steps
-   # dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
+    #dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
 ]
-STAGE_STARTS = [0, 500_000, 1_000_000, 2_500_000] # Changed form 0.7 treshold for more comparable outcomes
+STAGE_STARTS = [0, 500_000, 1_000_000, 2_500_000, 16_000_000] # Changed form 0.7 treshold for more comparable outcomes
 STATS_WINDOW = 100       # recent training episodes used for the logged success / outcome rates
 
 # PPO hyperparameters. Change one at a time and compare runs in TensorBoard
@@ -85,17 +84,15 @@ def parse_args() -> argparse.Namespace:
 
 
 class CurriculumCallback(BaseCallback):
-    """Moves all training envs to the next stage when the recent success rate is high enough.
-
-    Logged to TensorBoard: curriculum/stage, curriculum/success_rate.
-    """
-
-    def __init__(self, stages: list[dict], threshold: float, window: int, verbose: int = 1):
+    """Moves all training envs to the next stage at fixed env steps (STAGE_STARTS)."""
+    
+    def __init__(self, stages: list[dict], starts: list[int], window: int, verbose: int = 1):
         super().__init__(verbose)
+        assert len(stages) == len(starts), "one start step per stage"
         self.stages = stages
-        self.threshold = threshold
+        self.starts = starts
         self.stage = 0
-        self.successes = deque(maxlen=window)   # only for logging now
+        self.successes = deque(maxlen=window)    # only for logging now
 
     def _on_step(self) -> bool:
         # A VecEnv resets finished envs by itself; info of the done step is still the last step's info

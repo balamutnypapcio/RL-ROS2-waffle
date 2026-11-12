@@ -18,7 +18,7 @@ import numpy as np
 from gymnasium import spaces
 
 from tb3_nav.controller import RobotController
-from tb3_nav.layout_generator import generate_layout
+from tb3_nav.layout_generator import generate_layout, bfs_distances
 from tb3_nav.lidar import MAX_RANGE, Lidar
 from tb3_nav.make_scene import MODEL_DIR
 from tb3_nav.show_layout import LayoutPlacer
@@ -122,6 +122,9 @@ class NavEnv(gym.Env):
         self.outcome = None
         self.min_obstacle_dist = MAX_RANGE
         self.steps_since_record = 0
+        # map info used ONLY in the reward, the policy never sees it
+        self.goal_bfs = bfs_distances(self.layout.grid, self.layout.goal)
+        self.best_path_dist = self._path_dist()
 
         return self._get_obs(), self._get_info()
 
@@ -205,7 +208,10 @@ class NavEnv(gym.Env):
             self.steps_since_record += 1
 
         self.prev_goal_dist = min(self.prev_goal_dist, dist)
-        reward = PROGRESS_SCALE * progress + TIME_PENALTY + self._proximity_penalty()
+        path_dist = self._path_dist()
+        path_progress = max(0.0, self.best_path_dist - path_dist)
+        self.best_path_dist = min(self.best_path_dist, path_dist)
+        reward = PROGRESS_SCALE * path_progress + TIME_PENALTY + self._proximity_penalty()
         if self._goal_reached():
             reward += GOAL_REWARD
         elif self._collided():
@@ -250,7 +256,19 @@ class NavEnv(gym.Env):
                 return True
         return False
 
-
+    def _path_dist(self) -> float:
+        """Distance to the goal along free cells (walls make it longer). Reward only."""
+        x, y = self._robot_pose()[0]
+        cs, n = self.placer.cell_size, self.placer.grid_size
+        half = n * cs / 2
+        col = int(np.clip((x + half) // cs, 0, n - 1))
+        row = int(np.clip((y + half) // cs, 0, n - 1))
+        cells = self.goal_bfs[row, col]
+        if cells == 0:            # in the goal cell -> straight-line distance
+            return self._goal_dist()
+        if cells < 0:             # center over a wall cell -> keep the record
+            return self.best_path_dist
+        return cells * cs
 
     def _goal_dist(self) -> float:
         robot_xy, robot_yaw = self._robot_pose()

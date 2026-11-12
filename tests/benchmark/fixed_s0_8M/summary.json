@@ -1,0 +1,75 @@
+{
+  "info": {
+    "name": "fixed_s0_8M",
+    "model": "runs/fixed_s0/checkpoints/ppo_8000000_steps.zip",
+    "date": "2026-11-12T18:17:41",
+    "git_commit": "8c327cc",
+    "episodes_per_mode": 200,
+    "seed_offset": 20000,
+    "tests": {
+      "random": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "rooms": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "maze": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1500
+      }
+    },
+    "duration_s": 117
+  },
+  "results": {
+    "random": {
+      "episodes": 200,
+      "goal_rate": 0.67,
+      "collision_rate": 0.24,
+      "timeout_rate": 0.09,
+      "goal_rate_visible": 0.898,
+      "goal_rate_hidden": 0.574,
+      "n_visible": 59,
+      "n_hidden": 141,
+      "median_steps_to_goal": 355.0,
+      "median_min_obstacle_dist_m": 0.228
+    },
+    "rooms": {
+      "episodes": 200,
+      "goal_rate": 0.22,
+      "collision_rate": 0.27,
+      "timeout_rate": 0.51,
+      "goal_rate_visible": 0.917,
+      "goal_rate_hidden": 0.125,
+      "n_visible": 24,
+      "n_hidden": 176,
+      "median_steps_to_goal": 344.5,
+      "median_min_obstacle_dist_m": 0.215
+    },
+    "maze": {
+      "episodes": 200,
+      "goal_rate": 0.065,
+      "collision_rate": 0.725,
+      "timeout_rate": 0.21,
+      "goal_rate_visible": 1.0,
+      "goal_rate_hidden": 0.036,
+      "n_visible": 6,
+      "n_hidden": 194,
+      "median_steps_to_goal": 416.0,
+      "median_min_obstacle_dist_m": 0.167
+    }
+  }
+}
