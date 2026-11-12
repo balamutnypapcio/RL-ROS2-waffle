@@ -1,9 +1,9 @@
 {
   "info": {
-    "name": "final_model",
+    "name": "pathreward_s0_16M",
     "model": "runs/pathreward_s0/final_model.zip",
-    "date": "2026-11-12T22:43:54",
-    "git_commit": "8c327cc",
+    "date": "2026-11-12T23:28:52",
+    "git_commit": "7cad22a",
     "episodes_per_mode": 200,
     "seed_offset": 20000,
     "tests": {
@@ -32,7 +32,7 @@
         "max_steps": 1500
       }
     },
-    "duration_s": 89
+    "duration_s": 133
   },
   "results": {
     "random": {
@@ -61,15 +61,15 @@
     },
     "maze": {
       "episodes": 200,
-      "goal_rate": 0.105,
-      "collision_rate": 0.875,
-      "timeout_rate": 0.02,
-      "goal_rate_visible": 0.833,
-      "goal_rate_hidden": 0.082,
-      "n_visible": 6,
-      "n_hidden": 194,
-      "median_steps_to_goal": 529.0,
-      "median_min_obstacle_dist_m": 0.158
+      "goal_rate": 0.595,
+      "collision_rate": 0.18,
+      "timeout_rate": 0.225,
+      "goal_rate_visible": 0.929,
+      "goal_rate_hidden": 0.541,
+      "n_visible": 28,
+      "n_hidden": 172,
+      "median_steps_to_goal": 538.0,
+      "median_min_obstacle_dist_m": 0.229
     }
   }
 }

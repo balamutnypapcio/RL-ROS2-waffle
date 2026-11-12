@@ -263,7 +263,7 @@ def generate_layout(grid_size: int, rng: np.random.Generator, mode: str = "rando
         if mode == "random":
             grid = random_obstacles(grid_size, n_obstacles, rng)
         elif mode == "maze":
-            grid = maze(grid_size, rng)
+            grid = wide_maze(grid_size, rng)
         else:  # "rooms" - the only option left, checked above
             grid = rooms(grid_size, rng)
 

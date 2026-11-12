@@ -2,8 +2,8 @@
   "info": {
     "name": "jakub_final_2M",
     "model": "runs/ppo_20261103_225610/final_model.zip",
-    "date": "2026-11-12T18:10:06",
-    "git_commit": "8c327cc",
+    "date": "2026-11-12T23:22:15",
+    "git_commit": "7cad22a",
     "episodes_per_mode": 200,
     "seed_offset": 20000,
     "tests": {
@@ -32,7 +32,7 @@
         "max_steps": 1500
       }
     },
-    "duration_s": 77
+    "duration_s": 103
   },
   "results": {
     "random": {
@@ -61,15 +61,15 @@
     },
     "maze": {
       "episodes": 200,
-      "goal_rate": 0.09,
-      "collision_rate": 0.83,
-      "timeout_rate": 0.08,
-      "goal_rate_visible": 0.667,
-      "goal_rate_hidden": 0.072,
-      "n_visible": 6,
-      "n_hidden": 194,
-      "median_steps_to_goal": 365.5,
-      "median_min_obstacle_dist_m": 0.165
+      "goal_rate": 0.455,
+      "collision_rate": 0.39,
+      "timeout_rate": 0.155,
+      "goal_rate_visible": 0.714,
+      "goal_rate_hidden": 0.413,
+      "n_visible": 28,
+      "n_hidden": 172,
+      "median_steps_to_goal": 440.0,
+      "median_min_obstacle_dist_m": 0.211
     }
   }
 }

@@ -1,0 +1,49 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {part}{Part I}{1}{part*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Summary}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Changes}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Structure and packaging.}{1}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Robot model and LiDAR.}{1}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Gymnasium environment (\texttt  {nav\_env.py}).}{1}{section*.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Definition of \texttt  {NavEnv}.}}{1}{table.caption.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{PPO training with curriculum (\texttt  {train\_ppo.py}).}{2}{section*.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Curriculum stages.}}{2}{table.caption.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Tools, tests, documentation.}{2}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}First training results}{2}{section.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 2M-step run. Blue: training on the current stage; orange: evaluation on the hardest stage (10 episodes each); dashed lines: stage changes.}}{2}{figure.caption.9}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:run}{{1}{2}{2M-step run. Blue: training on the current stage; orange: evaluation on the hardest stage (10 episodes each); dashed lines: stage changes}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Open issues and next steps}{3}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {part}{Part II}{4}{part*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Summary}{4}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Changes}{4}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{1. Contact-based collisions and proximity penalty (\texttt  {7dfa4c1}).}{4}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{2. Record-based progress and a rooms stage (\texttt  {0834fdf}).}{4}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{3. Reward experiments that did not help (\texttt  {4d3da88}, \texttt  {c5f05c4}).}{4}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{4. Memory features in the observation (\texttt  {6a3e741}, \texttt  {534ad1e}).}{4}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{5. Standard benchmark (\texttt  {4f88e04}).}{5}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{6. Fixed curriculum schedule (\texttt  {8c327cc}).}{5}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{7. Path-distance progress reward (\texttt  {7cad22a}).}{5}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{8. Wider maze.}{5}{section*.18}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces \texttt  {NavEnv} at the end of Part II (changes from Part~I).}}{5}{table.caption.19}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Curriculum with a fixed schedule.}}{5}{table.caption.20}\protected@file@percent }
+\newlabel{tab:curriculum2}{{4}{5}{Curriculum with a fixed schedule}{table.caption.20}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Results}{5}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Intermediate experiments.}{5}{section*.21}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Goal reached on fixed maps (deterministic policy).}}{6}{table.caption.22}\protected@file@percent }
+\newlabel{tab:experiments}{{5}{6}{Goal reached on fixed maps (deterministic policy)}{table.caption.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{Benchmark.}{6}{section*.23}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Benchmark, 200 maps per type, in \%. ``Goal hidden'': the goal is not visible from the start (blocked straight line).}}{6}{table.caption.24}\protected@file@percent }
+\newlabel{tab:bench}{{6}{6}{Benchmark, 200 maps per type, in \%. ``Goal hidden'': the goal is not visible from the start (blocked straight line)}{table.caption.24}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Benchmark outcomes of all models (green: goal, red: collision, yellow: timeout).}}{6}{figure.caption.25}\protected@file@percent }
+\newlabel{fig:bench}{{2}{6}{Benchmark outcomes of all models (green: goal, red: collision, yellow: timeout)}{figure.caption.25}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Run \texttt  {pathreward\_s0} (16M steps). The training success rate stays at 40--50\% until about 14M steps and then rises to about 60\%; the run ended while it was still improving.}}{7}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:pathreward}{{3}{7}{Run \code {pathreward\_s0} (16M steps). The training success rate stays at 40--50\% until about 14M steps and then rises to about 60\%; the run ended while it was still improving}{figure.caption.26}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Example paths of \texttt  {pathreward\_s0} on the first six benchmark maps of each type.}}{7}{figure.caption.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Observations.}{7}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Run in progress and next steps}{8}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Overnight run \texttt  {pathreward\_maze\_s0}.}{8}{section*.29}\protected@file@percent }
+\gdef \@abspage@last{8}
