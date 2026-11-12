@@ -91,8 +91,19 @@ def test_close_to_a_block_is_penalized_but_not_a_collision():
 def test_observation_has_gap_from_best_distance():
     env = NavEnv()
     obs, _ = env.reset(seed=0)
-    assert obs[-1] == 0.0                       # at the start the robot is at its record
+    assert obs[-2] == 0.0                       # at the start the robot is at its record
 
     env.prev_goal_dist = env._goal_dist() - 0.5   # pretend the robot was once 0.5 m closer
     obs = env._get_obs()
-    assert obs[-1] == pytest.approx(0.5 / env.max_goal_dist)
+    assert obs[-2] == pytest.approx(0.5 / env.max_goal_dist)
+
+def test_observation_has_steps_since_record():
+    env = NavEnv()
+    obs, _ = env.reset(seed=0)
+    assert obs[-1] == 0.0                         # fresh episode: no stalling yet
+
+    env.steps_since_record = 100                  # half of STALL_STEPS_NORM
+    assert env._get_obs()[-1] == pytest.approx(0.5)
+
+    env.steps_since_record = 5000                 # far beyond the norm -> capped at 1
+    assert env._get_obs()[-1] == pytest.approx(1.0)
