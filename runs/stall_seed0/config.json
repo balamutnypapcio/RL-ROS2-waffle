@@ -1,13 +1,13 @@
 {
   "args": {
-    "timesteps": 20000,
-    "n_envs": 2,
+    "timesteps": 12000000,
+    "n_envs": 8,
     "seed": 0,
-    "run_name": "test_stats",
+    "run_name": "stall_seed0",
     "out": "/home/maks/MGR_sem_2/App_AI_Auto/RL-ROS2-waffle/runs",
-    "save_freq": 50000,
-    "eval_freq": 10000,
-    "eval_episodes": 2
+    "save_freq": 1000000,
+    "eval_freq": 1000000,
+    "eval_episodes": 30
   },
   "stages": [
     {
@@ -33,6 +33,18 @@
         15
       ],
       "min_dist_cells": 5
+    },
+    {
+      "mode": [
+        "random",
+        "rooms"
+      ],
+      "n_obstacles": [
+        8,
+        15
+      ],
+      "min_dist_cells": 5,
+      "max_steps": 1000
     },
     {
       "mode": [
