@@ -44,7 +44,7 @@ STAGES = [
     dict(mode=("random", "rooms"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
 
     # maze paths reach ~18 m (~70 s at full speed), so episodes need more steps
-    #dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
+    dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
 ]
 STAGE_STARTS = [0, 500_000, 1_000_000, 2_500_000, 16_000_000] # Changed form 0.7 treshold for more comparable outcomes
 STATS_WINDOW = 100       # recent training episodes used for the logged success / outcome rates

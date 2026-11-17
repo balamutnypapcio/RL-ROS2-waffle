@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.7.4)  13 NOV 2026 00:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.7.4)  13 NOV 2026 10:26
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -539,7 +539,7 @@ LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10.95> not available
 dvips/lm/lm-ec.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/sha
 re/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-m
 athit.enc}]
-<figures/training_ppo_20261103_225610.png, id=64, 1084.05pt x 614.295pt>
+<figures/training_ppo_20261103_225610.png, id=68, 1084.05pt x 614.295pt>
 File: figures/training_ppo_20261103_225610.png Graphic file (type png)
 <use figures/training_ppo_20261103_225610.png>
 Package pdftex.def Info: figures/training_ppo_20261103_225610.png  used on inpu
@@ -554,13 +554,13 @@ File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 261103_225610.png>] [3] [4
 
 ] [5]
-<figures/benchmark_comparison.png, id=111, 751.608pt x 325.215pt>
+<figures/benchmark_comparison.png, id=115, 751.608pt x 325.215pt>
 File: figures/benchmark_comparison.png Graphic file (type png)
 <use figures/benchmark_comparison.png>
 Package pdftex.def Info: figures/benchmark_comparison.png  used on input line 3
 36.
 (pdftex.def)             Requested size: 466.62503pt x 201.90414pt.
-<figures/training_pathreward_s0.png, id=112, 1084.05pt x 614.295pt>
+<figures/training_pathreward_s0.png, id=116, 1084.05pt x 614.295pt>
 File: figures/training_pathreward_s0.png Graphic file (type png)
 <use figures/training_pathreward_s0.png>
 Package pdftex.def Info: figures/training_pathreward_s0.png  used on input line
@@ -568,7 +568,7 @@ Package pdftex.def Info: figures/training_pathreward_s0.png  used on input line
 (pdftex.def)             Requested size: 466.62503pt x 264.4229pt.
 
 [6 <./figures/benchmark_comparison.png>]
-<figures/trajectories_pathreward_s0_16M.png, id=121, 953.964pt x 498.663pt>
+<figures/trajectories_pathreward_s0_16M.png, id=125, 953.964pt x 498.663pt>
 File: figures/trajectories_pathreward_s0_16M.png Graphic file (type png)
 <use figures/trajectories_pathreward_s0_16M.png>
 Package pdftex.def Info: figures/trajectories_pathreward_s0_16M.png  used on in
@@ -581,13 +581,13 @@ LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
 Package rerunfilecheck Info: File `project_log.out' has not changed.
-(rerunfilecheck)             Checksum: 926A54419FC15537E71BB85D3916A6ED;1157.
+(rerunfilecheck)             Checksum: B9E728720A2CFD9EDDFC21ED58B75D5B;1237.
  ) 
 Here is how much of TeX's memory you used:
- 11981 strings out of 476147
- 190027 string characters out of 5794720
+ 11983 strings out of 476147
+ 190047 string characters out of 5794720
  1938975 words of memory out of 5000000
- 33761 multiletter control sequences out of 15000+600000
+ 33762 multiletter control sequences out of 15000+600000
  635401 words of font info for 81 fonts, out of 8000000 for 9000
  34 hyphenation exceptions out of 8191
  75i,14n,79p,407b,565s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -599,10 +599,10 @@ texmf/fonts/type1/public/lm/lmr8.pfb></usr/share/texmf/fonts/type1/public/lm/lm
 ri10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy10.pfb></usr/share/texmf/f
 onts/type1/public/lm/lmtk10.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt10.
 pfb>
-Output written on project_log.pdf (8 pages, 820554 bytes).
+Output written on project_log.pdf (8 pages, 821957 bytes).
 PDF statistics:
- 214 PDF objects out of 1000 (max. 8388607)
- 169 compressed objects within 2 object streams
- 54 named destinations out of 1000 (max. 500000)
- 101 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 219 PDF objects out of 1000 (max. 8388607)
+ 174 compressed objects within 2 object streams
+ 55 named destinations out of 1000 (max. 500000)
+ 109 words of extra memory for PDF output out of 10000 (max. 10000000)
 
