@@ -80,6 +80,7 @@ def parse_args() -> argparse.Namespace:
     # Evaluation runs on the hardest stage (up to 1500 steps per episode), so not too often
     parser.add_argument("--eval-freq", type=int, default=50_000, help="evaluate every N env steps (default: 50000)")
     parser.add_argument("--eval-episodes", type=int, default=10, help="episodes per evaluation (default: 10)")
+    parser.add_argument("--init-model", type=Path, default=None, help="continue training this model .zip instead of starting from scratch")
     return parser.parse_args()
 
 
@@ -102,13 +103,13 @@ class CurriculumCallback(BaseCallback):
         if self.successes:
             self.logger.record("curriculum/success_rate", float(np.mean(self.successes)))
 
-        next_stage = self.stage + 1
-        if next_stage < len(self.stages) and self.num_timesteps >= self.starts[next_stage]:
-            self.stage = next_stage
+        while self.stage + 1 < len(self.stages) and self.num_timesteps >= self.starts[self.stage + 1]:
+            self.stage += 1
             self.training_env.env_method("set_difficulty", **self.stages[self.stage])
             self.successes.clear()
             if self.verbose:
                 print(f"\n[curriculum] step {self.num_timesteps} -> stage {self.stage}: {self.stages[self.stage]}")
+
         self.logger.record("curriculum/stage", self.stage)
         return True
 
@@ -181,16 +182,18 @@ def main() -> None:
         EpisodeStatsCallback(window=STATS_WINDOW),
     ]
 
-    model = PPO(
-        "MlpPolicy",
-        train_env,
-        seed=args.seed,
-        verbose=1,
-        tensorboard_log=str(run_dir / "tb"),
-        **PPO_KWARGS,
-    )
+    if args.init_model:
+        # Continue: weights, optimizer state and the step counter come from the file.
+        # PPO hyperparameters are also taken from the file, not from PPO_KWARGS.
+        model = PPO.load(args.init_model, env=train_env,
+                         tensorboard_log=str(run_dir / "tb"), verbose=1)
+        model.set_random_seed(args.seed)
+    else:
+        model = PPO("MlpPolicy", train_env, seed=args.seed, verbose=1,
+                    tensorboard_log=str(run_dir / "tb"), **PPO_KWARGS)
 
-    model.learn(total_timesteps=args.timesteps, callback=callbacks, progress_bar=False)
+    model.learn(total_timesteps=args.timesteps, callback=callbacks, progress_bar=False,
+                reset_num_timesteps=args.init_model is None)
     model.save(run_dir / "final_model")
     print(f"Saved: {run_dir / 'final_model.zip'}")
 
