@@ -51,7 +51,7 @@ def test_touching_a_block_is_a_collision():
     row, col = np.argwhere(env.layout.grid == WALL)[0]   # first wall cell of the map
     x, y = cell_center(int(row), int(col), env.placer.grid_size, env.placer.cell_size)
     q = env.placer.robot_qpos
-    env.data.qpos[q:q + 2] = [x - 0.3, y]       # robot front ~3 cm inside the block's left side
+    env.data.qpos[q:q + 2] = [x - (env.placer.cell_size / 2 + 0.05), y]       # robot front ~3 cm inside the block's left side
     env.data.qpos[q + 3:q + 7] = [1, 0, 0, 0]   # facing +x, towards the block
     env.data.qvel[:] = 0
     mujoco.mj_forward(env.model, env.data)
@@ -76,7 +76,7 @@ def test_close_to_a_block_is_penalized_but_not_a_collision():
     row, col = np.argwhere(env.layout.grid == WALL)[0]
     x, y = cell_center(int(row), int(col), env.placer.grid_size, env.placer.cell_size)
     q = env.placer.robot_qpos
-    env.data.qpos[q:q + 2] = [x - 0.40, y]      # ~7 cm gap between the robot front and the block
+    env.data.qpos[q:q + 2] = [x - (env.placer.cell_size / 2 + 0.15), y]      # ~7 cm gap between the robot front and the block
     env.data.qpos[q + 3:q + 7] = [1, 0, 0, 0]
     env.data.qvel[:] = 0
     mujoco.mj_forward(env.model, env.data)

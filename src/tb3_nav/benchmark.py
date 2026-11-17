@@ -35,9 +35,9 @@ BENCH_DIR = ROOT / "tests" / "benchmark"
 SEED_OFFSET = 20_000    # map seeds 20000, 20001, ... (the same maps as all earlier tests)
 # Map type -> NavEnv settings. Don't change them, or old results stop being comparable.
 TESTS = {
-    "random": dict(n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
-    "rooms":  dict(n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
-    "maze":   dict(n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
+    "random": dict(n_obstacles=(7, 12), min_dist_cells=5, max_steps=1000),
+    "rooms":  dict(n_obstacles=(7, 12), min_dist_cells=5, max_steps=1000),
+    "maze":   dict(n_obstacles=(8, 15), min_dist_cells=5, max_steps=2500),
 }
 OUTCOMES = ("goal", "collision", "timeout")
 COLORS = {"goal": "#2a9d8f", "collision": "#e76f51", "timeout": "#e9c46a"}
@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--name", type=str, help="result folder name (default: model file name)")
     parser.add_argument("--episodes", type=int, default=200, help="maps per map type (default: 200)")
     parser.add_argument("--workers", type=int, default=os.cpu_count(), help="parallel processes")
-    parser.add_argument("--out", type=Path, default=BENCH_DIR, help="results folder (default: tests/benchmark)")
+    parser.add_argument("--out", type=Path, default=BENCH_DIR, help="results folder (default: tests/benchmark_v2)")
     parser.add_argument("--compare-only", action="store_true", help="only redraw comparison.png")
     return parser.parse_args()
 

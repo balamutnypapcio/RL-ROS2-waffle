@@ -36,6 +36,8 @@ TIME_PENALTY = -0.01
 GOAL_REWARD = 30
 COLLISION_PENALTY = -50
 STALL_STEPS_NORM = 200
+DIST_NORM = 7.07   # [m] distance normalisation, fixed so models transfer between scenes (= old 10x0.5 diagonal)
+
 
 
 class NavEnv(gym.Env):
@@ -62,7 +64,8 @@ class NavEnv(gym.Env):
 
         # Layout generator settings (difficulty), can be changed later by the curriculum
         self.set_difficulty(mode, n_obstacles, min_dist_cells, max_steps)
-        self.max_goal_dist = np.sqrt(2) * self.placer.grid_size * self.placer.cell_size
+        # self.max_goal_dist = np.sqrt(2) * self.placer.grid_size * self.placer.cell_size
+        self.max_goal_dist = DIST_NORM
 
         self.robot_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "base")
         self.robot_wheel_ids = tuple(mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, name)
@@ -184,7 +187,9 @@ class NavEnv(gym.Env):
         distance, angle = goal_distance_angle(robot_xy, robot_yaw, self.goal_xy)
         sin = np.sin(angle)
         cos = np.cos(angle)
-        normalized_distance = distance / self.max_goal_dist
+        # normalized_distance = distance / self.max_goal_dist
+        normalized_distance = min(distance / self.max_goal_dist, 1.0)
+
         gap_from_best = max(0.0, distance - self.prev_goal_dist) / self.max_goal_dist #memory -- how much further form the  goal than the best distance so far
         stall = min(self.steps_since_record / STALL_STEPS_NORM, 1.0)   # 0 = progress just now, 1 = stuck >= 10 s
 

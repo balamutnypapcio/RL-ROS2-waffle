@@ -37,16 +37,17 @@ RUNS_DIR = ROOT / "runs"
 # Curriculum stages: keyword arguments of NavEnv.set_difficulty(), from easy to the target task.
 # n_obstacles is a (min, max) range drawn per episode; maze/rooms ignore it.
 STAGES = [
-    dict(mode="random", n_obstacles=(0, 3), min_dist_cells=2),
-    dict(mode="random", n_obstacles=(3, 8), min_dist_cells=3),
-    dict(mode="random", n_obstacles=(8, 15), min_dist_cells=5),
-    # rooms: full walls with 1-cell doors, the goal is often in another room
-    dict(mode=("random", "rooms"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1000),
-
-    # maze paths reach ~18 m (~70 s at full speed), so episodes need more steps
-    dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
+    # 0-5M: adapt to the 0.7 m blocks
+    dict(mode="random", n_obstacles=(7, 12), min_dist_cells=5, max_steps=1000),
+    # 5-10M: rooms 2x more often than random blocks
+    dict(mode=("random", "rooms", "rooms"), n_obstacles=(7, 12), min_dist_cells=5, max_steps=1500),
+    # 10-20M: mazes join (paths up to ~30 m)
+    dict(mode=("random", "rooms", "rooms", "maze", "maze"), n_obstacles=(7, 12), min_dist_cells=5, max_steps=2500),
+    # 20-30M: random blocks rare (~15%) instead of gone, so they are not forgotten
+    dict(mode=("random", "rooms", "rooms", "rooms", "maze", "maze", "maze"), n_obstacles=(7, 12), min_dist_cells=5, max_steps=2500),
 ]
-STAGE_STARTS = [0, 500_000, 1_000_000, 2_500_000, 16_000_000] # Changed form 0.7 treshold for more comparable outcomes
+STAGE_STARTS = [0, 5_000_000, 10_000_000, 20_000_000]
+
 STATS_WINDOW = 100       # recent training episodes used for the logged success / outcome rates
 
 # PPO hyperparameters. Change one at a time and compare runs in TensorBoard
@@ -103,7 +104,7 @@ class CurriculumCallback(BaseCallback):
         if self.successes:
             self.logger.record("curriculum/success_rate", float(np.mean(self.successes)))
 
-        while self.stage + 1 < len(self.stages) and self.num_timesteps >= self.starts[self.stage + 1]:
+        while self.stage + 1 < len(self.stages) and self.num_timesteps - self.offset >= self.starts[self.stage + 1]:
             self.stage += 1
             self.training_env.env_method("set_difficulty", **self.stages[self.stage])
             self.successes.clear()
@@ -112,6 +113,10 @@ class CurriculumCallback(BaseCallback):
 
         self.logger.record("curriculum/stage", self.stage)
         return True
+    
+    def _on_training_start(self) -> None:
+        self.offset = self.num_timesteps   # 0 for a new model, e.g. 16M when continuing
+
 
 
 class EpisodeStatsCallback(BaseCallback):
@@ -166,7 +171,7 @@ def main() -> None:
 
     # Separate env for evaluation on the target task,
     # different seed so it sees other maps than training
-    eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[3])
+    eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[-1])
 
     # Callbacks count calls of env.step() on the VecEnv, one call = n_envs env steps,
     # so the frequencies are divided by n_envs to stay in env steps.
