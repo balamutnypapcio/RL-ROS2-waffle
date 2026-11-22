@@ -1,0 +1,75 @@
+{
+  "info": {
+    "name": "wide_maze_1",
+    "model": "runs/pathreward_maze_s0/final_model.zip",
+    "date": "2026-11-13T08:16:13",
+    "git_commit": "d90d68e",
+    "episodes_per_mode": 200,
+    "seed_offset": 20000,
+    "tests": {
+      "random": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "rooms": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "maze": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1500
+      }
+    },
+    "duration_s": 166
+  },
+  "results": {
+    "random": {
+      "episodes": 200,
+      "goal_rate": 0.695,
+      "collision_rate": 0.29,
+      "timeout_rate": 0.015,
+      "goal_rate_visible": 0.763,
+      "goal_rate_hidden": 0.667,
+      "n_visible": 59,
+      "n_hidden": 141,
+      "median_steps_to_goal": 397.0,
+      "median_min_obstacle_dist_m": 0.203
+    },
+    "rooms": {
+      "episodes": 200,
+      "goal_rate": 0.34,
+      "collision_rate": 0.305,
+      "timeout_rate": 0.355,
+      "goal_rate_visible": 0.75,
+      "goal_rate_hidden": 0.284,
+      "n_visible": 24,
+      "n_hidden": 176,
+      "median_steps_to_goal": 488.0,
+      "median_min_obstacle_dist_m": 0.186
+    },
+    "maze": {
+      "episodes": 200,
+      "goal_rate": 0.71,
+      "collision_rate": 0.055,
+      "timeout_rate": 0.235,
+      "goal_rate_visible": 0.893,
+      "goal_rate_hidden": 0.68,
+      "n_visible": 28,
+      "n_hidden": 172,
+      "median_steps_to_goal": 597.0,
+      "median_min_obstacle_dist_m": 0.224
+    }
+  }
+}

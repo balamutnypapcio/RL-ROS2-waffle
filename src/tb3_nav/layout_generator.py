@@ -139,6 +139,17 @@ def maze(grid_size: int, rng: np.random.Generator) -> np.ndarray:
         grid[:, -1] = FREE
     return grid
 
+def wide_maze(grid_size: int, rng: np.random.Generator, scale: int = 2) -> np.ndarray:
+    """Maze with `scale`-cell-wide corridors: a small maze blown up `scale` times."""
+    small = maze(grid_size // scale, rng)
+    grid = np.kron(small, np.ones((scale, scale), dtype=np.int8))   # every cell -> scale x scale block
+    out = np.full((grid_size, grid_size), FREE, dtype=np.int8)      # leftover border (odd sizes) stays free
+    out[:grid.shape[0], :grid.shape[1]] = grid
+    return out
+
+
+
+
 
 def rooms(grid_size: int, rng: np.random.Generator) -> np.ndarray:
     """Four rooms: one full horizontal and one full vertical wall line with doorways.

@@ -9,8 +9,7 @@ Every run gets its own folder:
         config.json      all settings of the run (args, curriculum, PPO hyperparameters)
         plots/training.png, metrics.csv   training curves (plot_run.py, made at the end)
 
-Curriculum: training starts on STAGES[0] and moves to the next stage when the success rate
-of the last CURRICULUM_WINDOW training episodes reaches CURRICULUM_THRESHOLD.
+Curriculum: training starts on STAGES[0] and moves to the next stage when the specified number of timesteps has been reached.
 Evaluation always runs on the last stage (the target task), so eval/* is comparable over time.
 
 Usage (same as: python -m tb3_nav.train_ppo ...):
@@ -38,14 +37,18 @@ RUNS_DIR = ROOT / "runs"
 # Curriculum stages: keyword arguments of NavEnv.set_difficulty(), from easy to the target task.
 # n_obstacles is a (min, max) range drawn per episode; maze/rooms ignore it.
 STAGES = [
-    dict(mode="random", n_obstacles=(0, 3), min_dist_cells=2),
-    dict(mode="random", n_obstacles=(3, 8), min_dist_cells=3),
-    dict(mode="random", n_obstacles=(8, 15), min_dist_cells=5),
-    # maze paths reach ~18 m (~70 s at full speed), so episodes need more steps
-    dict(mode=("random", "rooms", "maze"), n_obstacles=(8, 15), min_dist_cells=5, max_steps=1500),
+    # 0-5M: adapt to the 0.7 m blocks
+    dict(mode="random", n_obstacles=(7, 12), min_dist_cells=5, max_steps=1000),
+    # 5-10M: rooms 2x more often than random blocks
+    dict(mode=("random", "rooms", "rooms"), n_obstacles=(7, 12), min_dist_cells=5, max_steps=1500),
+    # 10-20M: mazes join (paths up to ~30 m)
+    dict(mode=("random", "rooms", "rooms", "maze", "maze"), n_obstacles=(7, 12), min_dist_cells=5, max_steps=2500),
+    # 20-30M: random blocks rare (~15%) instead of gone, so they are not forgotten
+    dict(mode=("random", "rooms", "rooms", "rooms", "maze", "maze", "maze"), n_obstacles=(7, 12), min_dist_cells=5, max_steps=2500),
 ]
-CURRICULUM_THRESHOLD = 0.7   # success rate needed to move to the next stage
-CURRICULUM_WINDOW = 100      # number of recent training episodes the success rate is computed from
+STAGE_STARTS = [0, 5_000_000, 10_000_000, 20_000_000]
+
+STATS_WINDOW = 100       # recent training episodes used for the logged success / outcome rates
 
 # PPO hyperparameters. Change one at a time and compare runs in TensorBoard
 # (every run saves its settings to runs/<run_name>/config.json).
@@ -78,41 +81,74 @@ def parse_args() -> argparse.Namespace:
     # Evaluation runs on the hardest stage (up to 1500 steps per episode), so not too often
     parser.add_argument("--eval-freq", type=int, default=50_000, help="evaluate every N env steps (default: 50000)")
     parser.add_argument("--eval-episodes", type=int, default=10, help="episodes per evaluation (default: 10)")
+    parser.add_argument("--init-model", type=Path, default=None, help="continue training this model .zip instead of starting from scratch")
     return parser.parse_args()
 
 
 class CurriculumCallback(BaseCallback):
-    """Moves all training envs to the next stage when the recent success rate is high enough.
-
-    Logged to TensorBoard: curriculum/stage, curriculum/success_rate.
-    """
-
-    def __init__(self, stages: list[dict], threshold: float, window: int, verbose: int = 1):
+    """Moves all training envs to the next stage at fixed env steps (STAGE_STARTS)."""
+    
+    def __init__(self, stages: list[dict], starts: list[int], window: int, verbose: int = 1):
         super().__init__(verbose)
+        assert len(stages) == len(starts), "one start step per stage"
         self.stages = stages
-        self.threshold = threshold
+        self.starts = starts
         self.stage = 0
-        self.successes = deque(maxlen=window)   # 1.0 / 0.0 per finished episode, oldest drop out
+        self.successes = deque(maxlen=window)    # only for logging now
 
     def _on_step(self) -> bool:
         # A VecEnv resets finished envs by itself; info of the done step is still the last step's info
         for done, info in zip(self.locals["dones"], self.locals["infos"]):
             if done:
                 self.successes.append(float(info["is_success"]))
-
         if self.successes:
-            rate = float(np.mean(self.successes))
-            self.logger.record("curriculum/success_rate", rate)
-            # Wait for a full window, so a few lucky episodes don't move the stage
-            if (len(self.successes) == self.successes.maxlen and rate >= self.threshold
-                    and self.stage < len(self.stages) - 1):
-                self.stage += 1
-                self.training_env.env_method("set_difficulty", **self.stages[self.stage])
-                self.successes.clear()   # the new stage starts counting from zero
-                if self.verbose:
-                    print(f"\n[curriculum] success rate {rate:.0%} -> stage {self.stage}: {self.stages[self.stage]}")
+            self.logger.record("curriculum/success_rate", float(np.mean(self.successes)))
+
+        while self.stage + 1 < len(self.stages) and self.num_timesteps - self.offset >= self.starts[self.stage + 1]:
+            self.stage += 1
+            self.training_env.env_method("set_difficulty", **self.stages[self.stage])
+            self.successes.clear()
+            if self.verbose:
+                print(f"\n[curriculum] step {self.num_timesteps} -> stage {self.stage}: {self.stages[self.stage]}")
+
         self.logger.record("curriculum/stage", self.stage)
         return True
+    
+    def _on_training_start(self) -> None:
+        self.offset = self.num_timesteps   # 0 for a new model, e.g. 16M when continuing
+
+
+
+class EpisodeStatsCallback(BaseCallback):
+    """Logs how the recent training episodes ended.
+
+    Logged to TensorBoard (over the last `window` finished episodes):
+        episode/collision_rate     share of episodes that ended with a collision
+        episode/timeout_rate       share of episodes that ran out of steps
+        episode/min_obstacle_dist  mean of the closest distance to an obstacle per episode [m]
+    """
+
+    def __init__(self, window: int, verbose: int = 0):
+        super().__init__(verbose)
+        self.outcomes = deque(maxlen=window)       # "goal" / "collision" / "timeout" per episode
+        self.min_dists = deque(maxlen=window)      # closest obstacle distance per episode
+
+    def _on_step(self) -> bool:
+        for done, info in zip(self.locals["dones"], self.locals["infos"]):
+            if done:
+                self.outcomes.append(info["outcome"])
+                self.min_dists.append(info["min_obstacle_dist"])
+
+        if self.outcomes:
+            collision_rate = np.mean([o == "collision" for o in self.outcomes])
+            timeout_rate = np.mean([o == "timeout" for o in self.outcomes])
+            self.logger.record("episode/collision_rate", float(collision_rate))
+            self.logger.record("episode/timeout_rate", float(timeout_rate))
+            self.logger.record("episode/min_obstacle_dist", float(np.mean(self.min_dists)))
+        return True
+
+
+
 
 
 def main() -> None:
@@ -123,8 +159,8 @@ def main() -> None:
     print(f"Run folder: {run_dir}")
 
     # Save all settings of this run, so runs can be compared and repeated later
-    config = dict(args=vars(args), stages=STAGES, curriculum_threshold=CURRICULUM_THRESHOLD,
-                  curriculum_window=CURRICULUM_WINDOW, ppo=PPO_KWARGS)
+    config = dict(args=vars(args), stages=STAGES, stage_starts=STAGE_STARTS, 
+                  stats_window=STATS_WINDOW, ppo=PPO_KWARGS)
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, default=str))
 
     # Training envs: each in its own process (MuJoCo + Python LiDAR are CPU-bound).
@@ -133,7 +169,7 @@ def main() -> None:
     train_env = make_vec_env(NavEnv, n_envs=args.n_envs, seed=args.seed,
                              env_kwargs=STAGES[0], vec_env_cls=vec_env_cls)
 
-    # Separate env for evaluation on the target task (last stage),
+    # Separate env for evaluation on the target task,
     # different seed so it sees other maps than training
     eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[-1])
 
@@ -147,19 +183,22 @@ def main() -> None:
                      best_model_save_path=str(run_dir), log_path=str(run_dir / "eval"),
                      deterministic=True,
                      warn=False),   # train env is Subproc, eval env Dummy - that's fine here
-        CurriculumCallback(STAGES, threshold=CURRICULUM_THRESHOLD, window=CURRICULUM_WINDOW),
+        CurriculumCallback(STAGES, starts=STAGE_STARTS, window=STATS_WINDOW),
+        EpisodeStatsCallback(window=STATS_WINDOW),
     ]
 
-    model = PPO(
-        "MlpPolicy",
-        train_env,
-        seed=args.seed,
-        verbose=1,
-        tensorboard_log=str(run_dir / "tb"),
-        **PPO_KWARGS,
-    )
+    if args.init_model:
+        # Continue: weights, optimizer state and the step counter come from the file.
+        # PPO hyperparameters are also taken from the file, not from PPO_KWARGS.
+        model = PPO.load(args.init_model, env=train_env,
+                         tensorboard_log=str(run_dir / "tb"), verbose=1)
+        model.set_random_seed(args.seed)
+    else:
+        model = PPO("MlpPolicy", train_env, seed=args.seed, verbose=1,
+                    tensorboard_log=str(run_dir / "tb"), **PPO_KWARGS)
 
-    model.learn(total_timesteps=args.timesteps, callback=callbacks, progress_bar=False)
+    model.learn(total_timesteps=args.timesteps, callback=callbacks, progress_bar=False,
+                reset_num_timesteps=args.init_model is None)
     model.save(run_dir / "final_model")
     print(f"Saved: {run_dir / 'final_model.zip'}")
 

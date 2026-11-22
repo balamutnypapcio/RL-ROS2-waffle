@@ -5,6 +5,10 @@ from stable_baselines3.common.env_checker import check_env
 
 from tb3_nav.nav_env import NavEnv
 from tb3_nav.train_ppo import STAGES
+from tb3_nav.layout_generator import WALL
+from tb3_nav.make_scene import cell_center
+from tb3_nav.nav_env import TIME_PENALTY
+
 
 
 @pytest.mark.parametrize("stage", range(len(STAGES)))
@@ -22,7 +26,7 @@ def test_reset_observation_in_bounds():
 def test_set_difficulty_used_from_next_reset():
     env = NavEnv(**STAGES[0])
     env.set_difficulty(**STAGES[-1])
-    assert env.modes == ("random", "rooms", "maze")
+    assert env.modes == tuple(STAGES[-1]["mode"]) 
     assert env.max_steps == STAGES[-1]["max_steps"]
     env.reset(seed=0)   # must not fail with the new settings
 
@@ -40,3 +44,67 @@ def test_reaching_goal_gives_bonus_and_ends_episode():
     assert terminated and not truncated
     assert info["is_success"]
     assert reward > 10
+
+def test_touching_a_block_is_a_collision():
+    env = NavEnv(n_obstacles=10)
+    env.reset(seed=0)
+    row, col = np.argwhere(env.layout.grid == WALL)[0]   # first wall cell of the map
+    x, y = cell_center(int(row), int(col), env.placer.grid_size, env.placer.cell_size)
+    q = env.placer.robot_qpos
+    env.data.qpos[q:q + 2] = [x - (env.placer.cell_size / 2 + 0.05), y]       # robot front ~3 cm inside the block's left side
+    env.data.qpos[q + 3:q + 7] = [1, 0, 0, 0]   # facing +x, towards the block
+    env.data.qvel[:] = 0
+    mujoco.mj_forward(env.model, env.data)
+    env.prev_goal_dist = env._goal_dist()       # the teleport itself is not progress
+
+    _, reward, terminated, _, info = env.step(np.zeros(2, dtype=np.float32))
+    assert terminated
+    assert info["outcome"] == "collision"
+    assert reward < -40
+
+
+def test_start_position_is_not_a_collision():
+    env = NavEnv(n_obstacles=10)
+    for seed in range(20):
+        env.reset(seed=seed)
+        _, _, terminated, _, info = env.step(np.zeros(2, dtype=np.float32))
+        assert not terminated, f"seed {seed}: {info['outcome']}"
+
+def test_close_to_a_block_is_penalized_but_not_a_collision():
+    env = NavEnv(n_obstacles=10)
+    env.reset(seed=0)
+    row, col = np.argwhere(env.layout.grid == WALL)[0]
+    x, y = cell_center(int(row), int(col), env.placer.grid_size, env.placer.cell_size)
+    q = env.placer.robot_qpos
+    env.data.qpos[q:q + 2] = [x - (env.placer.cell_size / 2 + 0.15), y]      # ~7 cm gap between the robot front and the block
+    env.data.qpos[q + 3:q + 7] = [1, 0, 0, 0]
+    env.data.qvel[:] = 0
+    mujoco.mj_forward(env.model, env.data)
+    env.prev_goal_dist = env._goal_dist()
+    env.best_path_dist = env._path_dist()   # the teleport is not progress
+
+    _, reward, terminated, _, info = env.step(np.zeros(2, dtype=np.float32))
+    assert not terminated
+    assert info["outcome"] is None
+    assert env._proximity_penalty() < 0
+    assert reward < TIME_PENALTY       # worse than just standing far from walls
+
+def test_observation_has_gap_from_best_distance():
+    env = NavEnv()
+    obs, _ = env.reset(seed=0)
+    assert obs[-2] == 0.0                       # at the start the robot is at its record
+
+    env.prev_goal_dist = env._goal_dist() - 0.5   # pretend the robot was once 0.5 m closer
+    obs = env._get_obs()
+    assert obs[-2] == pytest.approx(0.5 / env.max_goal_dist)
+
+def test_observation_has_steps_since_record():
+    env = NavEnv()
+    obs, _ = env.reset(seed=0)
+    assert obs[-1] == 0.0                         # fresh episode: no stalling yet
+
+    env.steps_since_record = 100                  # half of STALL_STEPS_NORM
+    assert env._get_obs()[-1] == pytest.approx(0.5)
+
+    env.steps_since_record = 5000                 # far beyond the norm -> capped at 1
+    assert env._get_obs()[-1] == pytest.approx(1.0)
