@@ -23,7 +23,7 @@
 \@writefile{toc}{\contentsline {paragraph}{1. Contact-based collisions and proximity penalty (\texttt  {7dfa4c1}).}{4}{section*.11}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{2. Record-based progress and a rooms stage (\texttt  {0834fdf}).}{4}{section*.12}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{3. Reward experiments that did not help (\texttt  {4d3da88}, \texttt  {c5f05c4}).}{4}{section*.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{4. Memory features in the observation (\texttt  {6a3e741}, \texttt  {534ad1e}).}{4}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{4. Memory features in the observation (\texttt  {6a3e741}, \texttt  {534ad1e}).}{5}{section*.14}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{5. Standard benchmark (\texttt  {4f88e04}).}{5}{section*.15}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{6. Fixed curriculum schedule (\texttt  {8c327cc}).}{5}{section*.16}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{7. Path-distance progress reward (\texttt  {7cad22a}).}{5}{section*.17}\protected@file@percent }
@@ -31,8 +31,8 @@
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces \texttt  {NavEnv} at the end of Part II (changes from Part~I).}}{5}{table.caption.19}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Curriculum with a fixed schedule.}}{5}{table.caption.20}\protected@file@percent }
 \newlabel{tab:curriculum2}{{4}{5}{Curriculum with a fixed schedule}{table.caption.20}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Results}{5}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Intermediate experiments.}{5}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Results}{6}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Intermediate experiments.}{6}{section*.21}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Goal reached on fixed maps (deterministic policy).}}{6}{table.caption.22}\protected@file@percent }
 \newlabel{tab:experiments}{{5}{6}{Goal reached on fixed maps (deterministic policy)}{table.caption.22}{}}
 \@writefile{toc}{\contentsline {paragraph}{Benchmark.}{6}{section*.23}\protected@file@percent }
@@ -44,7 +44,29 @@
 \newlabel{fig:pathreward}{{3}{7}{Run \code {pathreward\_s0} (16M steps). The training success rate stays at 40--50\% until about 14M steps and then rises to about 60\%; the run ended while it was still improving}{figure.caption.26}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Example paths of \texttt  {pathreward\_s0} on the first six benchmark maps of each type.}}{7}{figure.caption.27}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Observations.}{7}{section*.28}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Run in progress and next steps}{8}{section.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Overnight run \texttt  {pathreward\_maze\_s0}.}{8}{section*.29}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}DO TO}{8}{section.9}\protected@file@percent }
-\gdef \@abspage@last{8}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Overnight run with the wide maze}{8}{section.8}\protected@file@percent }
+\newlabel{sec:widemaze}{{8}{8}{Overnight run with the wide maze}{section.8}{}}
+\@writefile{toc}{\contentsline {paragraph}{Run \texttt  {pathreward\_maze\_s0} (12--13 Nov, 7.5\,h).}{8}{section*.29}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Benchmark of the overnight run, goal / collision / timeout in \% (0.5\,m cells, wide maze).}}{8}{table.caption.30}\protected@file@percent }
+\newlabel{tab:widemaze}{{7}{8}{Benchmark of the overnight run, goal / collision / timeout in \% (0.5\,m cells, wide maze)}{table.caption.30}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Continued training and a new map scale (17--18 Nov)}{8}{section.9}\protected@file@percent }
+\newlabel{sec:world2}{{9}{8}{Continued training and a new map scale (17--18 Nov)}{section.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{9. Continue training from a saved model (\texttt  {beeb7eb}).}{8}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{10. Larger cells and the original maze (\texttt  {5214072}).}{8}{section*.32}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Maze path lengths for different scales (start and goal sampled as in training).}}{9}{table.caption.33}\protected@file@percent }
+\newlabel{tab:mazesize}{{8}{9}{Maze path lengths for different scales (start and goal sampled as in training)}{table.caption.33}{}}
+\@writefile{toc}{\contentsline {paragraph}{11. Fixed distance normalisation.}{9}{section*.34}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{12. Curriculum for continued training and benchmark v2.}{9}{section*.35}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Curriculum of the run \texttt  {world2\_s0} (all stages: 7--12 blocks, start--goal at least 5 cells apart).}}{9}{table.caption.36}\protected@file@percent }
+\newlabel{tab:curriculum3}{{9}{9}{Curriculum of the run \code {world2\_s0} (all stages: 7--12 blocks, start--goal at least 5 cells apart)}{table.caption.36}{}}
+\@writefile{toc}{\contentsline {paragraph}{Overnight run \texttt  {world2\_s0} (17--18 Nov, 7.75\,h).}{9}{section*.37}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Benchmark v2 (0.7\,m cells, $9\times 9$ grid, original maze), 200 maps per type, goal / collision / timeout in \%.}}{9}{table.caption.38}\protected@file@percent }
+\newlabel{tab:world2}{{10}{9}{Benchmark v2 (0.7\,m cells, $9\times 9$ grid, original maze), 200 maps per type, goal / collision / timeout in \%}{table.caption.38}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Run \texttt  {world2\_s0}, continued from \texttt  {pathreward\_s0} at 16M. The training success drops at every stage change (new, harder map types) and stays at about 60\% in the last stage.}}{10}{figure.caption.39}\protected@file@percent }
+\newlabel{fig:world2}{{5}{10}{Run \code {world2\_s0}, continued from \code {pathreward\_s0} at 16M. The training success drops at every stage change (new, harder map types) and stays at about 60\% in the last stage}{figure.caption.39}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Example paths of \texttt  {world2\_s0} (37M, best model) on the first six benchmark maps of each type.}}{10}{figure.caption.40}\protected@file@percent }
+\newlabel{fig:world2traj}{{6}{10}{Example paths of \code {world2\_s0} (37M, best model) on the first six benchmark maps of each type}{figure.caption.40}{}}
+\@writefile{toc}{\contentsline {paragraph}{Observations.}{10}{section*.41}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Next steps}{11}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {11}DO TO}{11}{section.11}\protected@file@percent }
+\gdef \@abspage@last{11}
