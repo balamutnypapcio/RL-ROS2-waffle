@@ -2,7 +2,7 @@
 <mujoco model="grid_9x9">
   <include file="turtlebot3_waffle_pi.xml"/>
 
-  <option timestep="0.002"/>
+  <option timestep="0.005"/>
 
   <statistic center="0 0 0" extent="3"/>
 
