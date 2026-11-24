@@ -182,7 +182,8 @@ def main() -> None:
 
     run_dir = args.run_dir
     if run_dir is None:
-        runs = sorted((p for p in RUNS_DIR.glob("*") if p.is_dir()), key=lambda p: p.stat().st_mtime)
+        runs = sorted((p for p in RUNS_DIR.glob("*") if p.is_dir() and not p.name.startswith("_")),
+                      key=lambda p: p.stat().st_mtime)
         if not runs:
             raise SystemExit(f"No runs in {RUNS_DIR}")
         run_dir = runs[-1]
