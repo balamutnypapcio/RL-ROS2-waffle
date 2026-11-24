@@ -23,7 +23,7 @@
 \normalsize Branches \code{first\_PPO\_training} (Part I) and
 \code{PPO\_evoution\_and\_tweaks} (Part II)}
 \author{Jakub Wilczyński \and Maksymilian Tulewicz}
-\date{4--12 November 2026}
+\date{4--18 November 2026}
 
 \begin{document}
 \maketitle
@@ -157,8 +157,8 @@ run \code{ppo\_20261103\_225610} (Fig.~\ref{fig:run}).
 % ======================================================================
 \section{Summary}
 % ======================================================================
-The branch \code{PPO\_evoution\_and\_tweaks} (10--12 Nov, commits
-\code{7dfa4c1}--\code{7cad22a}) addresses the collisions and the plateau from
+The branch \code{PPO\_evoution\_and\_tweaks} (10--18 Nov, commits
+\code{7dfa4c1}--\code{5cff7bf}) addresses the collisions and the plateau from
 Part~I. Every change was tested on its own (one change per run) and compared on
 a fixed set of maps. The main outcomes:
 \begin{itemize}[leftmargin=*]
@@ -172,7 +172,14 @@ a fixed set of maps. The main outcomes:
             (Part~I model) to 42\%, and random maps from 70\% to 77\%.
       \item A standard benchmark (\code{tb3-bench}) now evaluates every model on the same
             600 maps in about 2 minutes.
-      \item An overnight run with a wider maze (1\,m corridors) is in progress.
+      \item An overnight run with a wider maze (1\,m corridors) raised maze success
+            from 60\% to 71\%, but lowered rooms from 42\% to 34\%
+            (Section~\ref{sec:widemaze}).
+      \item Training can now continue from a saved model. The map scale was changed
+            (cells of 0.7\,m instead of 0.5\,m, a $9\times9$ grid, the original maze
+            generator again), and the best model was trained for another 30M steps on
+            the new maps (Section~\ref{sec:world2}). In the new world it reaches the
+            goal on 90\% of random maps, 76\% of rooms and 34\% of mazes.
 \end{itemize}
 
 % ======================================================================
@@ -368,22 +375,199 @@ new wide maze, on which none of these models was trained.
 \end{itemize}
 
 % ======================================================================
-\section{Run in progress and next steps}
+\section{Overnight run with the wide maze}
+\label{sec:widemaze}
 % ======================================================================
-\paragraph{Overnight run \code{pathreward\_maze\_s0}.} Same settings as
+\paragraph{Run \code{pathreward\_maze\_s0} (12--13 Nov, 7.5\,h).} Same settings as
 \code{pathreward\_s0} (path reward, fixed schedule, seed 0) for the first
-16M steps, then the wide maze is added (stage~4), 30M steps in total. The
-16M checkpoint gives a second measurement of the current setup; the rest
-shows the effect of the maze stage and of longer training. Without any maze
-training, \code{pathreward\_s0} already reaches the goal in 60\% of the wide
-maze maps (18\% collisions).
+16M steps, then the wide maze is added (stage~4), 30M steps in total.
+Before this run, \code{pathreward\_s0} (no maze training) already reached the
+goal in 60\% of the wide maze maps.
 
+\begin{table}[H]
+      \centering\small
+      \begin{tabular}{@{}l c c c@{}}
+            \toprule
+            Model                                      & Random maps   & Rooms         & Wide maze     \\
+            \midrule
+            \code{pathreward\_s0}, 16M, no maze stage  & 77 / 22 / 1   & 42 / 35 / 24  & 60 / 18 / 23  \\
+            \code{pathreward\_maze\_s0}, 30M           & 70 / 29 / 2   & 34 / 31 / 36  & 71 / 6 / 24   \\
+            \bottomrule
+      \end{tabular}
+      \caption{Benchmark of the overnight run, goal / collision / timeout in \%
+            (0.5\,m cells, wide maze).}
+      \label{tab:widemaze}
+\end{table}
+
+\emph{Effect:} the maze stage improved the wide maze (60\%$\to$71\%, collisions
+18\%$\to$6\%), but random maps and rooms got worse (77\%$\to$70\% and
+42\%$\to$34\%). The wide maze is also an easy maze: a $3\times3$ grid of
+junctions in a 5\,m arena, so it tests little more than a few turns. Both
+points led to the changes in the next section.
+
+% ======================================================================
+\section{Continued training and a new map scale (17--18 Nov)}
+\label{sec:world2}
+% ======================================================================
+
+\paragraph{9. Continue training from a saved model (\code{beeb7eb}).}
+\code{tb3-train --init-model <model.zip>} loads a saved model (weights,
+optimizer state, step counter and PPO hyperparameters from the file) instead
+of creating a new one, and continues its step counter. The curriculum
+schedule is counted from the start of the current run, so a model loaded at
+16M starts at the first stage of the new schedule. If several stage starts
+have passed at once, the callback moves through all of them in one step.
+A 1M-step smoke test (\code{pathreward\_s0\_cont}) confirmed that the model
+continues where it stopped.
+
+\paragraph{10. Larger cells and the original maze (\code{5214072}).}
+A block always fills one grid cell, so the cell size sets the corridor width,
+the door width and the wall thickness at the same time. With 0.5\,m cells
+the robot ($\approx$0.31\,m wide) has about 10\,cm on each side in a
+corridor. Driving exactly in the middle, its LiDAR already reads about
+0.25\,m, where the proximity penalty starts, so the robot was penalised even
+on a perfect path. Instead of scaling the maze up twice, the scene now uses
+\textbf{0.7\,m cells on a $9\times9$ grid} (6.3\,m arena) and the original
+maze generator again. With an odd grid size the maze has no free corridor
+along the arena wall (a shortcut around the maze). Table~\ref{tab:mazesize}
+shows path lengths for some candidate scales (2000 maps each). The scene is
+generated with \code{tb3-make-scene --grid 9 --cell 0.7}, which overwrites
+\code{models/scene\_grid.xml}; the old world is \code{--grid 10 --cell 0.5}.
+Random maps get 7--12 blocks (the same density as 8--15 on 100 cells).
+
+\begin{table}[H]
+      \centering\small
+      \begin{tabular}{@{}l c c c c@{}}
+            \toprule
+            Variant                                  & Arena          & Junctions        & Path mean / p90 / max  & Steps at full speed (p90) \\
+            \midrule
+            wide maze, $10\times0.5$\,m (Part~II)    & 5.0\,m         & $3\times3$       & 6.1 / 10.0 / 15.5\,m   & $\approx$770              \\
+            \textbf{maze, $9\times0.7$\,m (chosen)}  & 6.3\,m         & $5\times5$       & 11.5 / 19.6 / 30.8\,m  & $\approx$1500             \\
+            maze, $11\times0.7$\,m                   & 7.7\,m         & $6\times6$       & 14.8 / 26.6 / 43.4\,m  & $\approx$2050             \\
+            \bottomrule
+      \end{tabular}
+      \caption{Maze path lengths for different scales (start and goal sampled as in training).}
+      \label{tab:mazesize}
+\end{table}
+
+\paragraph{11. Fixed distance normalisation.} The goal distance and
+\code{gap\_from\_best} were divided by the arena diagonal, which depends on
+the scene. A trained model would then get different inputs for the same
+distance in a new scene. They are now divided by a constant 7.07\,m (the old
+diagonal) and clipped to 1, so old models see the same values as before.
+
+\paragraph{12. Curriculum for continued training and benchmark v2.}
+Map types are mixed by repeating them in the stage's mode tuple, e.g.
+\code{("random", "rooms", "rooms")} gives one third random maps.
+Random maps are kept in every stage (about 15\% in the last one), because the
+wide maze stage had made the random maps worse. The benchmark uses the new
+scene with the same seeds, 7--12 blocks on random maps and 2500 steps in the
+maze, so its results are not comparable with Tables~\ref{tab:bench}
+and~\ref{tab:widemaze}.
+
+\begin{table}[H]
+      \centering\small
+      \begin{tabular}{@{}c l c c c@{}}
+            \toprule
+            Stage & Map types (share)                         & Step limit & Run steps & Model steps \\
+            \midrule
+            0     & random                                    & 1000       & 0--5M     & 16--21M     \\
+            1     & random 1/3, rooms 2/3                     & 1500       & 5--10M    & 21--26M     \\
+            2     & random 1/5, rooms 2/5, maze 2/5           & 2500       & 10--20M   & 26--36M     \\
+            3     & random 1/7, rooms 3/7, maze 3/7           & 2500       & 20--30M   & 36--46M     \\
+            \bottomrule
+      \end{tabular}
+      \caption{Curriculum of the run \code{world2\_s0} (all stages: 7--12 blocks,
+            start--goal at least 5 cells apart).}
+      \label{tab:curriculum3}
+\end{table}
+
+\paragraph{Overnight run \code{world2\_s0} (17--18 Nov, 7.75\,h).} Continues
+\code{pathreward\_s0} (16M) for 30M steps on the new maps (seed 0). Both
+candidate base models were first benchmarked in the new world without
+training. \code{pathreward\_s0} was better on random maps and rooms, and both
+had about 80\% collisions in the new maze. Table~\ref{tab:world2} shows the
+benchmark at the end of every stage. The 37M model is \code{best\_model.zip}
+of the run.
+
+\begin{table}[H]
+      \centering\footnotesize\setlength{\tabcolsep}{4pt}
+      \begin{tabular}{@{}l c c c c@{}}
+            \toprule
+            Model (steps)                                  & Random maps     & Rooms            & Rooms, goal hidden & Maze            \\
+            \midrule
+            \code{pathreward\_maze\_s0} (30M), no training   & 84.5 / 9.5 / 6  & 55.5 / 5.5 / 39  & 49                 & 14 / 78 / 8     \\
+            \code{pathreward\_s0} (16M), no training         & 90.5 / 7 / 2.5  & 70 / 10 / 20     & 66                 & 14.5 / 84 / 1.5 \\
+            \midrule
+            \code{world2\_s0} 21M (end of stage 0)           & 90.5 / 8 / 1.5  & 65 / 9.5 / 25.5  & 60                 & 14 / 83 / 3     \\
+            \code{world2\_s0} 26M (end of stage 1)           & 92 / 5.5 / 2.5  & 60 / 11 / 29     & 54                 & 19.5 / 62.5 / 18 \\
+            \code{world2\_s0} 36M (end of stage 2)           & 92.5 / 5.5 / 2  & 75.5 / 14 / 10.5 & 73                 & 15.5 / 50.5 / 34 \\
+            \textbf{\code{world2\_s0} 37M (best model)}      & 90 / 3 / 7      & \textbf{75.5} / 3.5 / 21 & \textbf{72} & \textbf{33.5} / 31.5 / 35 \\
+            \code{world2\_s0} 46M (final)                    & 83 / 11.5 / 5.5 & 70 / 11 / 19     & 67                 & 27 / 45 / 28    \\
+            \bottomrule
+      \end{tabular}
+      \caption{Benchmark v2 (0.7\,m cells, $9\times9$ grid, original maze),
+            200 maps per type, goal / collision / timeout in \%.}
+      \label{tab:world2}
+\end{table}
+
+\begin{figure}[H]
+      \centering
+      \includegraphics[width=\textwidth]{figures/training_world2_s0.png}
+      \caption{Run \code{world2\_s0}, continued from \code{pathreward\_s0} at 16M.
+            The training success drops at every stage change (new, harder map
+            types) and stays at about 60\% in the last stage.}
+      \label{fig:world2}
+\end{figure}
+
+\begin{figure}[H]
+      \centering
+      \includegraphics[width=\textwidth]{figures/trajectories_world2_s0_37M.png}
+      \caption{Example paths of \code{world2\_s0} (37M, best model) on the first
+            six benchmark maps of each type.}
+      \label{fig:world2traj}
+\end{figure}
+
+\paragraph{Observations.}
+\begin{itemize}[leftmargin=*]
+      \item \textbf{The new scale helps on random maps and rooms even without
+            training.} The same model (\code{pathreward\_s0}) goes from 77\% to
+            90.5\% on random maps and from 42\% to 70\% in rooms. Wider passages
+            and doors cause fewer collisions. The maps are therefore easier and the
+            numbers are not comparable with the old benchmark.
+      \item \textbf{Goal behind a wall is still the main difficulty in rooms:}
+            94\% success when the goal is visible from the start and 72\% when it is
+            hidden (best model).
+      \item \textbf{The new maze is much harder.} Maze training lowered collisions from
+            84\% to about 30--50\%, but success only rose from 14.5\% to 27--33.5\%.
+            Many failures are now timeouts: in Fig.~\ref{fig:world2traj} the robot
+            stops or turns back and forth in a dead end or a corner. With the
+            record-based reward, driving back out of a dead end earns nothing
+            until the robot beats its best distance, so it costs only time.
+            This is a hypothesis and has not been tested yet.
+      \item \textbf{The last stage did not help.} The final model (46M) is worse than the
+            37M model on all map types (random 83\% vs 90\%, maze 27\% vs 33.5\%).
+            One seed only: differences of 5--9 points are within the seed noise.
+      \item In this run \code{best\_model.zip} (37M) also turned out best on the benchmark,
+            but it was chosen by 30 evaluation episodes only.
+      \item The benchmark allows 1000 steps in rooms, while training used 1500--2500;
+            part of the 20\% rooms timeouts may come from this limit.
+      \item Training speed: about 1070 steps/s; 30M steps take 7.75\,h with evaluations.
+\end{itemize}
+
+% ======================================================================
+\section{Next steps}
+% ======================================================================
 \begin{enumerate}[leftmargin=*]
-      \item Benchmark the overnight checkpoints (16M, 20M, 25M, 30M).
-      \item Repeat the best setup with a second seed.
-      \item Rooms remain the bottleneck (35\% collisions, 24\% timeouts). Next candidates,
-            one at a time: a recurrent policy (LSTM) for longer memory, more LiDAR rays or
-            range.
+      \item Repeat \code{world2\_s0} with a second seed to see whether the drop in the
+            last stage is real or noise.
+      \item Mazes (dead ends, timeouts): test one change at a time, e.g.\ a longer
+            maze stage without the last stage, or a reward that does not punish
+            leaving a dead end.
+      \item Rooms: more rooms per map (two wall lines in each direction) if the
+            current rooms become too easy.
+      \item Recurrent policy (LSTM) for longer memory, more LiDAR rays or range
+            (postponed so far).
       \item Export the trained policy to ROS~2.
 \end{enumerate}
 

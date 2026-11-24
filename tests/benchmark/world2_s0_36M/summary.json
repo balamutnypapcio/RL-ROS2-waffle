@@ -1,0 +1,75 @@
+{
+  "info": {
+    "name": "world2_s0_36M",
+    "model": "runs/world2_s0/checkpoints/ppo_36007168_steps.zip",
+    "date": "2026-11-22T21:39:03",
+    "git_commit": "886d12f",
+    "episodes_per_mode": 200,
+    "seed_offset": 20000,
+    "tests": {
+      "random": {
+        "n_obstacles": [
+          7,
+          12
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "rooms": {
+        "n_obstacles": [
+          7,
+          12
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "maze": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 2500
+      }
+    },
+    "duration_s": 211
+  },
+  "results": {
+    "random": {
+      "episodes": 200,
+      "goal_rate": 0.925,
+      "collision_rate": 0.055,
+      "timeout_rate": 0.02,
+      "goal_rate_visible": 0.986,
+      "goal_rate_hidden": 0.892,
+      "n_visible": 70,
+      "n_hidden": 130,
+      "median_steps_to_goal": 450.0,
+      "median_min_obstacle_dist_m": 0.264
+    },
+    "rooms": {
+      "episodes": 200,
+      "goal_rate": 0.755,
+      "collision_rate": 0.14,
+      "timeout_rate": 0.105,
+      "goal_rate_visible": 0.875,
+      "goal_rate_hidden": 0.732,
+      "n_visible": 32,
+      "n_hidden": 168,
+      "median_steps_to_goal": 561.0,
+      "median_min_obstacle_dist_m": 0.222
+    },
+    "maze": {
+      "episodes": 200,
+      "goal_rate": 0.155,
+      "collision_rate": 0.505,
+      "timeout_rate": 0.34,
+      "goal_rate_visible": 1.0,
+      "goal_rate_hidden": 0.146,
+      "n_visible": 2,
+      "n_hidden": 198,
+      "median_steps_to_goal": 613.0,
+      "median_min_obstacle_dist_m": 0.173
+    }
+  }
+}
