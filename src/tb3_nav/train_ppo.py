@@ -70,6 +70,20 @@ PPO_KWARGS = dict(
 )
 
 
+# PPO settings that can be changed from the command line, also when continuing a saved model.
+# (net_arch can't: the saved weights must fit the network.)
+PPO_OVERRIDES = dict(learning_rate=float, n_steps=int, batch_size=int, n_epochs=int, gamma=float,
+                     gae_lambda=float, clip_range=float, ent_coef=float, vf_coef=float, max_grad_norm=float)
+
+
+def effective_ppo(model: PPO) -> dict:
+    """PPO hyperparameters the model really trains with (after loading / overrides)."""
+    values = {k: getattr(model, k) for k in PPO_OVERRIDES}
+    values["clip_range"] = float(model.clip_range(1.0))     # stored as a schedule
+    values["policy_kwargs"] = model.policy_kwargs
+    return values
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train PPO on NavEnv.")
     parser.add_argument("--timesteps", type=int, default=200_000, help="total env steps (default: 200000)")
@@ -82,6 +96,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval-freq", type=int, default=50_000, help="evaluate every N env steps (default: 50000)")
     parser.add_argument("--eval-episodes", type=int, default=10, help="episodes per evaluation (default: 10)")
     parser.add_argument("--init-model", type=Path, default=None, help="continue training this model .zip instead of starting from scratch")
+    parser.add_argument("--stage", type=int, default=None,
+                        help="train the whole run on this one curriculum stage (index into STAGES, -1 = last), "
+                             "no stage changes; useful for short fine-tuning runs")
+    # PPO hyperparameters: override PPO_KWARGS (new model) or the values stored in --init-model
+    ppo = parser.add_argument_group("PPO hyperparameters (default: PPO_KWARGS, or the values in --init-model)")
+    for name, typ in PPO_OVERRIDES.items():
+        ppo.add_argument("--" + name.replace("_", "-"), type=typ, default=None)
     return parser.parse_args()
 
 
@@ -155,19 +176,23 @@ def main() -> None:
     args = parse_args()
     run_name = args.run_name or datetime.now().strftime("ppo_%Y%m%d_%H%M%S")
     run_dir = args.out / run_name
+    if run_dir.exists() and any(run_dir.iterdir()):
+        # never overwrite the models / logs of an earlier run
+        raise SystemExit(f"Run folder {run_dir} already exists, choose another --run-name")
     run_dir.mkdir(parents=True, exist_ok=True)
     print(f"Run folder: {run_dir}")
 
-    # Save all settings of this run, so runs can be compared and repeated later
-    config = dict(args=vars(args), stages=STAGES, stage_starts=STAGE_STARTS, 
-                  stats_window=STATS_WINDOW, ppo=PPO_KWARGS)
-    (run_dir / "config.json").write_text(json.dumps(config, indent=2, default=str))
+    if args.stage is not None:
+        stages, stage_starts = [STAGES[args.stage]], [0]     # one fixed stage for the whole run
+    else:
+        stages, stage_starts = STAGES, STAGE_STARTS
+    overrides = {k: getattr(args, k) for k in PPO_OVERRIDES if getattr(args, k) is not None}
 
     # Training envs: each in its own process (MuJoCo + Python LiDAR are CPU-bound).
     # make_vec_env wraps every env in a Monitor, so episode reward / length show up in the logs.
     vec_env_cls = SubprocVecEnv if args.n_envs > 1 else DummyVecEnv
     train_env = make_vec_env(NavEnv, n_envs=args.n_envs, seed=args.seed,
-                             env_kwargs=STAGES[0], vec_env_cls=vec_env_cls)
+                             env_kwargs=stages[0], vec_env_cls=vec_env_cls)
 
     # Separate env for evaluation on the target task,
     # different seed so it sees other maps than training
@@ -183,19 +208,28 @@ def main() -> None:
                      best_model_save_path=str(run_dir), log_path=str(run_dir / "eval"),
                      deterministic=True,
                      warn=False),   # train env is Subproc, eval env Dummy - that's fine here
-        CurriculumCallback(STAGES, starts=STAGE_STARTS, window=STATS_WINDOW),
+        CurriculumCallback(stages, starts=stage_starts, window=STATS_WINDOW),
         EpisodeStatsCallback(window=STATS_WINDOW),
     ]
 
     if args.init_model:
         # Continue: weights, optimizer state and the step counter come from the file.
-        # PPO hyperparameters are also taken from the file, not from PPO_KWARGS.
+        # PPO hyperparameters are also taken from the file (not from PPO_KWARGS),
+        # except the ones given on the command line (set before the model is rebuilt).
         model = PPO.load(args.init_model, env=train_env,
-                         tensorboard_log=str(run_dir / "tb"), verbose=1)
+                         tensorboard_log=str(run_dir / "tb"), verbose=1, **overrides)
         model.set_random_seed(args.seed)
     else:
         model = PPO("MlpPolicy", train_env, seed=args.seed, verbose=1,
-                    tensorboard_log=str(run_dir / "tb"), **PPO_KWARGS)
+                    tensorboard_log=str(run_dir / "tb"), **{**PPO_KWARGS, **overrides})
+
+    # Save all settings of this run, so runs can be compared and repeated later.
+    # "ppo" = the values the model really trains with, "ppo_overrides" = what was changed by hand.
+    config = dict(args=vars(args), stages=stages, stage_starts=stage_starts,
+                  stats_window=STATS_WINDOW, ppo=effective_ppo(model), ppo_overrides=overrides,
+                  start_timesteps=model.num_timesteps)
+    (run_dir / "config.json").write_text(json.dumps(config, indent=2, default=str))
+    print(f"PPO: {config['ppo']}  (changed: {overrides or 'nothing'})")
 
     model.learn(total_timesteps=args.timesteps, callback=callbacks, progress_bar=False,
                 reset_num_timesteps=args.init_model is None)
