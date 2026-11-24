@@ -29,7 +29,7 @@ import numpy as np
 
 from tb3_nav.layout_generator import WALL, bfs_distances
 from tb3_nav.make_scene import ROOT
-from tb3_nav.nav_env import NavEnv
+from tb3_nav.nav_env import FRAME_SKIP, NavEnv
 
 BENCH_DIR = ROOT / "tests" / "benchmark"
 SEED_OFFSET = 20_000    # map seeds 20000, 20001, ... (the same maps as all earlier tests)
@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--name", type=str, help="result folder name (default: model file name)")
     parser.add_argument("--episodes", type=int, default=200, help="maps per map type (default: 200)")
     parser.add_argument("--workers", type=int, default=os.cpu_count(), help="parallel processes")
-    parser.add_argument("--out", type=Path, default=BENCH_DIR, help="results folder (default: tests/benchmark_v2)")
+    parser.add_argument("--out", type=Path, default=BENCH_DIR, help="results folder (default: tests/benchmark)")
     parser.add_argument("--compare-only", action="store_true", help="only redraw comparison.png")
     return parser.parse_args()
 
@@ -207,11 +207,24 @@ def plot_paths(rows: list[dict], name: str, path: Path) -> None:
     plt.close(fig)
 
 
+def scene_info() -> dict:
+    """Map / physics settings the benchmark runs with. Results are only comparable if these match."""
+    env = NavEnv()
+    return dict(grid_size=int(env.placer.grid_size), cell_size_m=float(env.placer.cell_size),
+                physics_timestep_s=float(env.model.opt.timestep), frame_skip=FRAME_SKIP)
+
+
 def compare_all(out: Path) -> None:
     """Draw every saved result next to each other: comparison.png + comparison.csv."""
     results = []
     for f in sorted(out.glob("*/summary.json")):
         results.append(json.loads(f.read_text()))
+    # Only results from the CURRENT scene go into the comparison (other maps = other task)
+    scene = scene_info()
+    skipped = [s["info"]["name"] for s in results if s["info"].get("scene") != scene]
+    if skipped:
+        print(f"WARNING: skipped {len(skipped)} result(s) from another scene / without scene info: {skipped}")
+    results = [s for s in results if s["info"].get("scene") == scene]
     if not results:
         return
     results.sort(key=lambda s: s["info"]["date"])
@@ -248,6 +261,15 @@ def compare_all(out: Path) -> None:
     fig.savefig(out / "comparison.png", dpi=120)
     plt.close(fig)
     print(f"comparison of {len(names)} results -> {out / 'comparison.png'}")
+
+
+def model_info(path: Path) -> dict:
+    """Training steps and number of inputs of a model, read without loading the network."""
+    import zipfile
+    with zipfile.ZipFile(path) as z:
+        data = json.loads(z.read("data"))
+    return dict(num_timesteps=data.get("num_timesteps"),
+                n_inputs=data.get("observation_space", {}).get("_shape", [None])[0])
 
 
 def git_commit() -> str:
@@ -290,7 +312,8 @@ def main() -> None:
     summary = summarize(rows)
     info = dict(name=name, model=str(args.model), date=datetime.now().isoformat(timespec="seconds"),
                 git_commit=git_commit(), episodes_per_mode=args.episodes, seed_offset=SEED_OFFSET,
-                tests=TESTS, duration_s=round(time.time() - t0))
+                tests=TESTS, scene=scene_info(), model_info=model_info(args.model),
+                duration_s=round(time.time() - t0))
     (run_dir / "summary.json").write_text(json.dumps(dict(info=info, results=summary), indent=2))
     plot_outcomes(summary, name, run_dir / "outcomes.png")
     plot_paths(rows, name, run_dir / "trajectories.png")

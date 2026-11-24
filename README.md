@@ -29,15 +29,16 @@ All commands work from any directory (with `.venv` active). Each one is also ava
 
 | command | what it does |
 |---|---|
-| `tb3-make-scene --grid 10 --cell 0.5` | generates the scene `models/scene_grid.xml` (10×10 grid, 0.5 m cells) |
+| `tb3-make-scene --grid 9 --cell 0.7` | generates the scene `models/scene_grid.xml` (9×9 grid, 0.7 m cells) |
 | `tb3-layouts --grid 10 --mode maze --count 3` | prints example maps in the terminal |
 | `tb3-show --mode random --obstacles 12` | MuJoCo viewer: map, robot, LiDAR rays |
 | `tb3-train --timesteps 1000000 --n-envs 4` | PPO training |
 | `tb3-plot [runs/<name>]` | (re)draws the training plots of a run (default: the newest one) |
 | `tb3-play [runs/<name>]` | MuJoCo viewer: a trained model drives (default: the newest run) |
+| `tb3-bench <model.zip> --name <name>` | standard benchmark: 200 fixed maps per type (random, rooms, maze) |
 | `pytest` | tests |
 
-The scene is already in the repo (10×10, 0.5 m). Run `tb3-make-scene` only after changing the grid or cell size.
+The scene is already in the repo (9×9, 0.7 m). Run `tb3-make-scene` only after changing the grid or cell size. The old world (until 17 Nov) was `--grid 10 --cell 0.5`; models and benchmark results from different scenes are not comparable.
 
 ### Viewer (`tb3-show`)
 
@@ -78,15 +79,26 @@ Episodes run one after another on new maps. The terminal shows how each one ende
 
 Note: `best_model.zip` is chosen from only `--eval-episodes` evaluation episodes, so `final_model.zip` can be just as good. Compare both.
 
-### Results in git
-
-Run folders are committed to git, except `checkpoints/` (dozens of ~2 MB files per run). One run is about 4 MB: two models, plots, logs and config. Git keeps every committed file in its history forever, so **commit only the runs worth keeping** and delete failed experiments first:
+### Benchmark (`tb3-bench`)
 
 ```bash
-rm -r runs/<failed_run>
-git add runs/<good_run>
-git commit -m "Training run: 2M steps, curriculum reached stage 3"
+tb3-bench runs/world2_s0/best_model.zip --name world2_s0_37M
+tb3-bench --compare-only        # only redraw the comparison
 ```
+
+Every model drives on the **same 600 maps** (map seeds 20000–20199 for each of random / rooms / maze), so results are directly comparable. Results go to `tests/benchmark/<name>/`, the comparison of all models to `tests/benchmark/comparison.png` / `comparison.csv`. Every `summary.json` stores the scene (grid, cell size, physics step); the comparison skips results from another scene. Results from the old 10×10 / 0.5 m world are kept in `tests/benchmark/_archive/`.
+
+### Trained models and results in git
+
+**Which model is which, and which is the best: see [MODELS.md](MODELS.md).**
+
+- Model files (`*.zip`) are **not** committed. Models worth keeping are published as **GitHub Releases** (tag `model/<run>-<steps>`), with the config and benchmark result attached. Download one with:
+  ```bash
+  gh release download model/world2_s0-37M -D runs/world2_s0 -p model.zip
+  tb3-play runs/world2_s0/model.zip
+  ```
+- Run folders are committed **without** models: `config.json`, `metrics.csv`, `plots/`, `eval/`, `tb/`. Runs that did not lead anywhere go to `runs/_archive/`; failed/test runs are deleted.
+- After training a model worth keeping: benchmark it, publish a release, add a row to `MODELS.md`.
 
 ## Structure
 
@@ -104,15 +116,17 @@ src/tb3_nav/
     train_ppo.py            PPO training with curriculum
     plot_run.py             training plots from the TensorBoard logs
     play_model.py           viewer: a trained model drives
-runs/                       training results (models, plots, logs), one folder per run
-tests/                      tests (pytest)
+    benchmark.py            standard benchmark on fixed maps + comparison of models
+runs/                       training results (plots, logs, config), one folder per run; runs/_archive/ = old experiments
+tests/                      tests (pytest); tests/benchmark/ = benchmark results
 ```
 
 **Environment (`NavEnv`):**
 - **action:** `[v, omega]` in [-1, 1], scaled to 0.26 m/s and 1.82 rad/s;
-- **observation (41 values):** 36 LiDAR readings / range, robot v and ω (from the wheels), distance to goal / arena diagonal, sin and cos of the angle to the goal;
-- **reward:** 10 × progress towards the goal [m], −0.01 per step, +15 for the goal, −15 for a collision;
-- **episode end:** goal reached (< 0.2 m), collision (LiDAR < 0.2 m) or step limit (500, 1500 in the last stage).
+- **timing:** physics step 0.005 s × 10 = 0.05 s per action;
+- **observation (43 values):** 36 LiDAR readings / range, robot v and ω (from the wheels), distance to goal / 7.07 m (clipped to 1), sin and cos of the angle to the goal, `gap_from_best` (how much farther than the closest point so far), `stall` (steps since the last new record / 200, clipped to 1);
+- **reward:** 10 × new record of the **path distance** to the goal (BFS over free cells, so walls count) [m], −0.01 per step, proximity penalty up to −0.1 per step (LiDAR 0.25 m → 0.15 m), +30 for the goal, −50 for a collision;
+- **episode end:** goal reached (< 0.2 m), collision (MuJoCo contact between the robot and a wall/block) or step limit (1000–2500, set by the curriculum stage).
 
 ## Docker (ROS 2 Humble)
 
