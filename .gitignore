@@ -12,5 +12,4 @@ lidar_data.txt
 # (config, metrics, plots, eval, TensorBoard logs). Models worth keeping are published
 # as GitHub Releases and listed in MODELS.md.
 runs/**/checkpoints/
-runs/**/*.zip
 runs/_logs/

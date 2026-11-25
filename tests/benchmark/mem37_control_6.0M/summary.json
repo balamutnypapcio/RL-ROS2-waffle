@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "mem37_control_6.0M",
+    "model": "runs/mem37_control/final_model.zip",
+    "date": "2026-11-25T04:32:14",
+    "git_commit": "e95fc37",
+    "episodes_per_mode": 200,
+    "seed_offset": 20000,
+    "tests": {
+      "random": {
+        "n_obstacles": [
+          7,
+          12
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "rooms": {
+        "n_obstacles": [
+          7,
+          12
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "maze": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 2500
+      }
+    },
+    "scene": {
+      "grid_size": 9,
+      "cell_size_m": 0.7,
+      "physics_timestep_s": 0.005,
+      "frame_skip": 10
+    },
+    "model_info": {
+      "num_timesteps": 43020096,
+      "n_inputs": 43
+    },
+    "duration_s": 178
+  },
+  "results": {
+    "random": {
+      "episodes": 200,
+      "goal_rate": 0.88,
+      "collision_rate": 0.07,
+      "timeout_rate": 0.05,
+      "goal_rate_visible": 0.929,
+      "goal_rate_hidden": 0.854,
+      "n_visible": 70,
+      "n_hidden": 130,
+      "median_steps_to_goal": 481.0,
+      "median_min_obstacle_dist_m": 0.282
+    },
+    "rooms": {
+      "episodes": 200,
+      "goal_rate": 0.665,
+      "collision_rate": 0.105,
+      "timeout_rate": 0.23,
+      "goal_rate_visible": 0.844,
+      "goal_rate_hidden": 0.631,
+      "n_visible": 32,
+      "n_hidden": 168,
+      "median_steps_to_goal": 536.0,
+      "median_min_obstacle_dist_m": 0.239
+    },
+    "maze": {
+      "episodes": 200,
+      "goal_rate": 0.295,
+      "collision_rate": 0.28,
+      "timeout_rate": 0.425,
+      "goal_rate_visible": 0.5,
+      "goal_rate_hidden": 0.293,
+      "n_visible": 2,
+      "n_hidden": 198,
+      "median_steps_to_goal": 719.0,
+      "median_min_obstacle_dist_m": 0.185
+    }
+  }
+}

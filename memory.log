@@ -1,0 +1,13 @@
+nohup: ignoring input
+=== mem37_visit5: train (--visit-map 5) 01:41:15, log: runs/_logs/mem37_visit5.log
+=== mem37_visit5_6.0M: benchmark 03:04:37
+random  goal 86%  collision 8%  timeout 6%  | goal hidden: 82% of 130
+rooms   goal 60%  collision 11%  timeout 28%  | goal hidden: 57% of 168
+maze    goal 35%  collision 20%  timeout 44%  | goal hidden: 35% of 198
+=== mem37_control: train (--visit-map 0) 03:07:57, log: runs/_logs/mem37_control.log
+=== mem37_control_6.0M: benchmark 04:29:16
+random  goal 88%  collision 7%  timeout 5%  | goal hidden: 85% of 130
+rooms   goal 66%  collision 10%  timeout 23%  | goal hidden: 63% of 168
+maze    goal 30%  collision 28%  timeout 42%  | goal hidden: 29% of 198
+=== finished 04:32:15
+Compare: tests/benchmark/comparison.png, always mem37_visit5_<steps> against mem37_control_<steps>
