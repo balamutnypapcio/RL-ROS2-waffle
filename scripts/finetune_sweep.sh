@@ -17,7 +17,7 @@ BASE=runs/world2_s0/best_model.zip   # or: gh release download model/world2_s0-3
 PREFIX=ft37
 STEPS=1500000
 SEED=0                               # same seed for all variants -> differences come from the parameters
-COMMON=(--init-model "$BASE" --timesteps "$STEPS" --n-envs 8 --seed "$SEED" --stage -1
+COMMON=(--init-model "$BASE" --timesteps "$STEPS" --n-envs 4 --seed "$SEED" --stage -1
         --save-freq 500000 --eval-freq 500000 --eval-episodes 30)
 
 # name | extra tb3-train arguments | description          (one change per variant, add your own lines)

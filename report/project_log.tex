@@ -21,9 +21,9 @@
 \title{\textbf{Project Log}\\[4pt]
 \large RL-ROS2-waffle: PPO navigation training\\
 \normalsize Branches \code{first\_PPO\_training} (Part I) and
-\code{PPO\_evoution\_and\_tweaks} (Part II)}
+\code{PPO\_evoution\_and\_tweaks} (Part II), \code{main} (Part III)}
 \author{Jakub Wilczyński \and Maksymilian Tulewicz}
-\date{4--18 November 2026}
+\date{4--25 November 2026}
 
 \begin{document}
 \maketitle
@@ -569,6 +569,198 @@ of the run.
       \item Recurrent policy (LSTM) for longer memory, more LiDAR rays or range
             (postponed so far).
       \item Export the trained policy to ROS~2.
+\end{enumerate}
+
+% ######################################################################
+\clearpage
+\part*{Part III: fine-tuning sweep of PPO hyperparameters (\code{main}, 24--25 Nov)}
+\addcontentsline{toc}{part}{Part III}
+% ######################################################################
+
+% ======================================================================
+\section{Summary}
+% ======================================================================
+The best model so far, \code{world2\_s0} at 37M steps, was trained further for
+a short time (1.5M steps) six times, each time with \textbf{one} PPO
+hyperparameter changed. The question was which hyperparameters are worth
+tuning before longer runs. The main outcomes:
+\begin{itemize}[leftmargin=*]
+      \item \textbf{No variant is better than the base model} on any map type.
+            The base model stays the best model (mean goal rate over the three map
+            types: 66.7\%; best variant: 61.5\%).
+      \item Fine-tuning \emph{without any change} (control) already lowers the
+            results on random maps by 12 points and in rooms by 9.5 points. Part of the
+            drop is probably because the base model is \code{best\_model.zip}, which was
+            picked as the best of many evaluations.
+      \item Compared with the control: a larger entropy bonus (0.01) is worse on all
+            map types. No entropy bonus and a smaller clip range improve random maps,
+            but more than double the collisions in the maze. A lower learning rate
+            (1e-4) is the only variant that is not clearly worse anywhere except the maze.
+\end{itemize}
+
+% ======================================================================
+\section{Setup}
+% ======================================================================
+
+\paragraph{13. Fine-tuning sweep script (\code{966d94b}).}
+\code{scripts/finetune\_sweep.sh} trains every variant from the same
+base model and then runs the standard benchmark on its final model. Each
+variant gets its own folder \code{runs/ft37\_<name>/} and
+\code{tests/benchmark/ft37\_<name>/}. A variant with a finished benchmark is
+skipped, so the script can be stopped and restarted.
+\code{bash scripts/finetune\_sweep.sh all} runs all variants one after another,
+and \code{bash scripts/finetune\_sweep.sh <name> ...} runs only the named ones.
+The new option \code{tb3-train --stage -1} trains the whole run on the last
+curriculum stage, with no stage changes.
+
+\begin{table}[H]
+      \centering\small
+      \begin{tabularx}{\textwidth}{@{}l X@{}}
+            \toprule
+            Base model     & \code{runs/world2\_s0/best\_model.zip} (37.0M steps, release \code{model/world2\_s0-37M})                        \\
+            Training       & 1.5M steps per variant, seed 0 for all, 4 parallel environments                                                  \\
+            Maps           & last stage of Tab.~\ref{tab:curriculum3}: random 1/7, rooms 3/7, maze 3/7; 7--12 blocks; 2500 steps          \\
+            PPO (base)     & lr $3\cdot10^{-4}$, \code{n\_steps} 2048, batch 256, 10 epochs, $\gamma$ 0.995, GAE 0.95, clip 0.2, entropy 0.005 \\
+            Benchmark      & \code{final\_model.zip} of each variant, benchmark v2 (200 maps per type, same maps as Tab.~\ref{tab:world2})  \\
+            Time           & about 32\,min training ($\approx$790 steps/s) and 5\,min benchmark per variant; 3.7\,h in total               \\
+            \bottomrule
+      \end{tabularx}
+      \caption{Settings of the fine-tuning sweep \code{ft37}.}
+      \label{tab:ftsetup}
+\end{table}
+
+\begin{table}[H]
+      \centering\small
+      \begin{tabular}{@{}l l@{}}
+            \toprule
+            Variant            & Change (all other settings as the base model)                       \\
+            \midrule
+            \code{control}     & no change: reference for all other variants                         \\
+            \code{lr1e-4}      & learning rate $3\cdot10^{-4}\to10^{-4}$ (smaller, more stable steps) \\
+            \code{ent0}        & entropy bonus $0.005\to0$ (no extra exploration)                    \\
+            \code{ent0.01}     & entropy bonus $0.005\to0.01$ (more exploration)                     \\
+            \code{clip0.1}     & clip range $0.2\to0.1$ (smaller policy change per update)           \\
+            \code{epochs5}     & epochs per update $10\to5$                                          \\
+            \bottomrule
+      \end{tabular}
+      \caption{Variants of the sweep, one change each.}
+      \label{tab:ftvariants}
+\end{table}
+
+\emph{Note:} the base model was trained with 8 parallel environments, the sweep
+uses 4. With \code{n\_steps} = 2048 per
+environment, one PPO update now uses 8192 instead of 16384 steps. This change
+applies to \emph{all} variants, including the control.
+
+% ======================================================================
+\section{Results}
+% ======================================================================
+
+\begin{table}[H]
+      \centering\small
+      \begin{tabular}{@{}l c c c c@{}}
+            \toprule
+            Model                                       & Random maps        & Rooms              & Maze               & Mean goal \\
+            \midrule
+            \textbf{base: \code{world2\_s0} 37M}        & \textbf{90} / 3 / 7      & \textbf{77} / 3.5 / 19.5 & 33 / 28 / 39       & \textbf{66.7} \\
+            \midrule
+            \code{ft37\_control}                        & 78 / 13 / 9        & 67.5 / 12 / 20.5   & \textbf{34} / 30.5 / 35.5 & 59.8 \\
+            \code{ft37\_lr1e-4}                         & 84.5 / 9 / 6.5     & 72.5 / 9.5 / 18    & 27.5 / 32.5 / 40   & 61.5      \\
+            \code{ft37\_ent0}                           & 87 / 8.5 / 4.5     & 66.5 / 7 / 26.5    & 22.5 / 55.5 / 22   & 58.7      \\
+            \code{ft37\_ent0.01}                        & 70 / 18.5 / 11.5   & 58 / 11.5 / 30.5   & 25 / 43.5 / 31.5   & 51.0      \\
+            \code{ft37\_clip0.1}                        & 85.5 / 10 / 4.5    & 67.5 / 15 / 17.5   & 17.5 / 50.5 / 32   & 56.8      \\
+            \code{ft37\_epochs5}                        & 76.5 / 18 / 5.5    & 65 / 18 / 17       & 26 / 34 / 40       & 55.8      \\
+            \bottomrule
+      \end{tabular}
+      \caption{Benchmark v2 of the sweep, goal / collision / timeout in \%,
+            200 maps per type. The base model row is from the repeated benchmark of
+            24 Nov (\code{tests/benchmark/comparison.csv}); it differs from
+            Tab.~\ref{tab:world2} by at most 1.5 points.}
+      \label{tab:ftresults}
+\end{table}
+
+\begin{figure}[H]
+      \centering
+      \includegraphics[width=\textwidth]{figures/finetune_sweep_ft37.png}
+      \caption{Goal rate of the base model and of every variant. A star marks a
+            difference from the control that is unlikely to be benchmark noise
+            (paired exact test on the same 200 maps, $p<0.05$). This test does not
+            include the noise between training seeds.}
+      \label{fig:ftsweep}
+\end{figure}
+
+\begin{table}[H]
+      \centering\small
+      \begin{tabular}{@{}l c c c c c c@{}}
+            \toprule
+                              & control & lr1e-4 & ent0 & ent0.01 & clip0.1 & epochs5 \\
+            \midrule
+            Random maps       & --      & +6.5   & \textbf{+9.0}  & $-8.0$           & \textbf{+7.5}     & $-1.5$           \\
+            Rooms             & --      & +5.0   & $-1.0$         & $\mathbf{-9.5}$  & 0.0               & $-2.5$           \\
+            Maze              & --      & $\mathbf{-6.5}$ & $\mathbf{-11.5}$ & $\mathbf{-9.0}$ & $\mathbf{-16.5}$ & $\mathbf{-8.0}$ \\
+            \midrule
+            Policy std at end & 0.19    & 0.17   & 0.13 & 0.32    & 0.33    & 0.29    \\
+            \bottomrule
+      \end{tabular}
+      \caption{Change of the goal rate against the control in percentage points
+            (bold: $p<0.05$ in the paired test), and the policy standard deviation at
+            the end of training (0.27 at the start for all variants).}
+      \label{tab:ftdiff}
+\end{table}
+
+\paragraph{Observations.}
+\begin{itemize}[leftmargin=*]
+      \item \textbf{Even the control loses.} With no change at all, 1.5M more steps
+            lower the goal rate on random maps from 90\% to 78\% and in rooms from 77\%
+            to 67.5\% (paired test $p=0.001$ and $p=0.009$); the maze stays the same
+            (33\%$\to$34\%). Likely reasons, not yet separated:
+            (1)~the base model is \code{best\_model.zip}, the best of 30
+            evaluations of the run (30 episodes each), so a model a little later is expected to be worse
+            (the final model of the same run at 46M had 83 / 70 / 27, close to the
+            control); (2)~only 1/7 of the training maps are random maps;
+            (3)~4 instead of 8 environments (smaller PPO updates).
+            For this reason the variants are compared with the control, not with the
+            base model.
+      \item \textbf{More exploration hurts.} \code{ent0.01} is the worst variant on
+            all map types ($-8$ to $-9.5$ points against the control), with more
+            collisions on random maps and in the maze.
+      \item \textbf{Less exploration or smaller updates: better on random maps,
+            worse in the maze.} \code{ent0} and \code{clip0.1} gain 7.5--9 points on
+            random maps, but lose 11.5--16.5 points in the maze, where collisions rise
+            from 30.5\% to 50--55\%. The policy of \code{ent0} becomes the most
+            deterministic (std $0.27\to0.13$).
+      \item \textbf{Lower learning rate (\code{lr1e-4}) has the best mean} (61.5\%)
+            and is closest to the base model on random maps and rooms, but the gains
+            against the control there are not significant, and the maze is 6.5 points
+            lower.
+      \item \textbf{\code{epochs5}} is about the same as the control on random maps and
+            rooms and 8 points lower in the maze.
+      \item \textbf{No learning progress during the sweep.} In all variants the
+            training success stayed at 60--65\% and the evaluation success (30
+            episodes) at 53--67\%. The differences show how far the policy
+            \emph{drifts} in 1.5M steps, not that a variant learns faster.
+      \item \textbf{One seed per variant.} The paired test only covers the benchmark
+            noise. Between two training seeds the results differed by 5--9 points in
+            Part~II, so only the large and consistent effects (\code{ent0.01} worse
+            everywhere, the maze drop of \code{ent0} and \code{clip0.1}) can be trusted.
+\end{itemize}
+
+% ======================================================================
+\section{Next steps}
+% ======================================================================
+\begin{enumerate}[leftmargin=*]
+      \item Keep \code{world2\_s0} 37M as the best model; none of the fine-tuned models
+            is worth a release.
+      \item Find out when the control gets worse: benchmark its checkpoints at 0.5M
+            and 1M steps and its \code{best\_model.zip} (about 5\,min each).
+      \item Separate the causes of the drop: repeat the control with
+            \code{--n-envs 8}, and with more random maps in the stage.
+      \item If one hyperparameter is followed up, then \code{lr1e-4}: a second seed
+            and a longer run (5M steps).
+      \item The maze (about 33\% goal, the rest split between collisions and timeouts)
+            is still the main problem, and none of the PPO settings fixed it. The next
+            change should be in the reward or the observation (Part~II, Next steps 2
+            and 4), not in the PPO hyperparameters.
 \end{enumerate}
 
 \section{DO TO}

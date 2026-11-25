@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "ft37_epochs5",
+    "model": "runs/ft37_epochs5/final_model.zip",
+    "date": "2026-11-25T00:03:30",
+    "git_commit": "fe067b5",
+    "episodes_per_mode": 200,
+    "seed_offset": 20000,
+    "tests": {
+      "random": {
+        "n_obstacles": [
+          7,
+          12
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "rooms": {
+        "n_obstacles": [
+          7,
+          12
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 1000
+      },
+      "maze": {
+        "n_obstacles": [
+          8,
+          15
+        ],
+        "min_dist_cells": 5,
+        "max_steps": 2500
+      }
+    },
+    "scene": {
+      "grid_size": 9,
+      "cell_size_m": 0.7,
+      "physics_timestep_s": 0.005,
+      "frame_skip": 10
+    },
+    "model_info": {
+      "num_timesteps": 38514496,
+      "n_inputs": 43
+    },
+    "duration_s": 325
+  },
+  "results": {
+    "random": {
+      "episodes": 200,
+      "goal_rate": 0.765,
+      "collision_rate": 0.18,
+      "timeout_rate": 0.055,
+      "goal_rate_visible": 0.857,
+      "goal_rate_hidden": 0.715,
+      "n_visible": 70,
+      "n_hidden": 130,
+      "median_steps_to_goal": 502.0,
+      "median_min_obstacle_dist_m": 0.227
+    },
+    "rooms": {
+      "episodes": 200,
+      "goal_rate": 0.65,
+      "collision_rate": 0.18,
+      "timeout_rate": 0.17,
+      "goal_rate_visible": 0.75,
+      "goal_rate_hidden": 0.631,
+      "n_visible": 32,
+      "n_hidden": 168,
+      "median_steps_to_goal": 609.5,
+      "median_min_obstacle_dist_m": 0.213
+    },
+    "maze": {
+      "episodes": 200,
+      "goal_rate": 0.26,
+      "collision_rate": 0.34,
+      "timeout_rate": 0.4,
+      "goal_rate_visible": 1.0,
+      "goal_rate_hidden": 0.253,
+      "n_visible": 2,
+      "n_hidden": 198,
+      "median_steps_to_goal": 712.0,
+      "median_min_obstacle_dist_m": 0.178
+    }
+  }
+}
