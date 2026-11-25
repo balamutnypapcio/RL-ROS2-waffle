@@ -29,6 +29,7 @@ tb3-train = "tb3_nav.train_ppo:main"
 tb3-plot = "tb3_nav.plot_run:main"
 tb3-play = "tb3_nav.play_model:main"
 tb3-bench = "tb3_nav.benchmark:main"
+tb3-expand-model = "tb3_nav.expand_model:main"
 
 
 [tool.setuptools.packages.find]

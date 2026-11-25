@@ -108,3 +108,95 @@ def test_observation_has_steps_since_record():
 
     env.steps_since_record = 5000                 # far beyond the norm -> capped at 1
     assert env._get_obs()[-1] == pytest.approx(1.0)
+
+# ------------------------------- visit map (memory) -------------------------------------
+from tb3_nav.nav_env import VISIT_NORM, visit_map_size
+
+
+def _put_robot(env, row, col, yaw):
+    """Teleport the robot to the center of cell (row, col), heading yaw [rad]."""
+    x, y = cell_center(row, col, env.placer.grid_size, env.placer.cell_size)
+    q = env.placer.robot_qpos
+    env.data.qpos[q:q + 2] = [x, y]
+    env.data.qpos[q + 3:q + 7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+    env.data.qvel[:] = 0
+    mujoco.mj_forward(env.model, env.data)
+
+
+def test_visit_map_off_by_default_keeps_old_observation():
+    assert NavEnv().observation_space.shape == (43,)
+    assert NavEnv(visit_map=5).observation_space.shape == (43 + 25,)
+
+
+def test_visit_map_must_be_odd():
+    with pytest.raises(ValueError):
+        NavEnv(visit_map=4)
+
+
+def test_check_env_with_visit_map():
+    check_env(NavEnv(**STAGES[-1], visit_map=5))
+
+
+def test_visit_map_size_from_number_of_inputs():
+    assert visit_map_size(43) == 0
+    assert visit_map_size(41) == 0       # older models
+    assert visit_map_size(68) == 5
+    assert visit_map_size(52) == 3
+    with pytest.raises(ValueError):
+        visit_map_size(50)
+
+
+def test_start_cell_is_visited_once():
+    env = NavEnv(visit_map=5)
+    obs, _ = env.reset(seed=0)
+    window = obs[-25:].reshape(5, 5)
+    assert window[2, 2] == pytest.approx(1 / VISIT_NORM)     # robot in the middle
+    assert window.sum() == pytest.approx(1 / VISIT_NORM)     # nothing else visited yet
+    assert env.visits.sum() == 1
+
+
+def test_entering_a_cell_counts_once_and_coming_back_counts_again():
+    env = NavEnv(visit_map=5)
+    env.reset(seed=0)
+    start = env.robot_cell
+    env.visits[:] = 0
+    env.robot_cell = None
+    _put_robot(env, 4, 4, 0.0)
+    env._update_visits()
+    env._update_visits()                  # still the same cell -> not a new visit
+    assert env.visits[4, 4] == 1
+    _put_robot(env, 4, 5, 0.0)
+    env._update_visits()
+    _put_robot(env, 4, 4, 0.0)
+    env._update_visits()                  # back again -> second visit
+    assert env.visits[4, 4] == 2
+    assert env.visits[4, 5] == 1
+    assert start is not None
+
+
+@pytest.mark.parametrize("yaw, ahead_cell, left_cell", [
+    (0.0, (4, 5), (5, 4)),               # facing +x: ahead = next column, left = next row (+y)
+    (np.pi / 2, (5, 4), (4, 3)),         # facing +y: ahead = next row, left = previous column (-x)
+])
+def test_visit_window_turns_with_the_robot(yaw, ahead_cell, left_cell):
+    env = NavEnv(visit_map=5)
+    env.reset(seed=0)
+    _put_robot(env, 4, 4, yaw)
+    env.visits[:] = 0
+    env.visits[ahead_cell] = VISIT_NORM          # -> 1.0
+    env.visits[left_cell] = 1                    # -> 1/3
+    window = env._visit_window().reshape(5, 5)   # row 0 = farthest ahead, column 0 = farthest left
+    assert window[1, 2] == pytest.approx(1.0)
+    assert window[2, 1] == pytest.approx(1 / VISIT_NORM)
+    assert window.sum() == pytest.approx(1.0 + 1 / VISIT_NORM)
+
+
+def test_visit_window_is_zero_outside_the_arena():
+    env = NavEnv(visit_map=5)
+    env.reset(seed=0)
+    _put_robot(env, 0, 0, 0.0)                   # corner cell, facing +x
+    env.visits[:] = VISIT_NORM                   # every arena cell "visited"
+    window = env._visit_window().reshape(5, 5)
+    assert window[:, 4].sum() == 0               # 2 cells to the right = -y, outside
+    assert window[4, :].sum() == 0               # 2 cells behind = -x, outside
+    assert window[2, 2] == pytest.approx(1.0)

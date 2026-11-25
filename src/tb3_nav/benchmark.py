@@ -29,7 +29,7 @@ import numpy as np
 
 from tb3_nav.layout_generator import WALL, bfs_distances
 from tb3_nav.make_scene import ROOT
-from tb3_nav.nav_env import FRAME_SKIP, NavEnv
+from tb3_nav.nav_env import FRAME_SKIP, NavEnv, visit_map_size
 
 BENCH_DIR = ROOT / "tests" / "benchmark"
 SEED_OFFSET = 20_000    # map seeds 20000, 20001, ... (the same maps as all earlier tests)
@@ -86,10 +86,10 @@ def goal_hidden(start: np.ndarray, goal: np.ndarray, grid: np.ndarray, cell: flo
 
 def run_episode(task: tuple[str, int]) -> dict:
     mode, episode = task
-    if mode not in _envs:
-        _envs[mode] = NavEnv(mode=mode, **TESTS[mode])
-    env = _envs[mode]
     n_inputs = _model.observation_space.shape[0]   # older models have fewer inputs (cut the rest)
+    if mode not in _envs:
+        _envs[mode] = NavEnv(mode=mode, **TESTS[mode], visit_map=visit_map_size(n_inputs))
+    env = _envs[mode]
 
     obs, _ = env.reset(seed=SEED_OFFSET + episode)
     start, goal = env._robot_pose()[0].copy(), env.goal_xy.copy()

@@ -37,14 +37,38 @@ GOAL_REWARD = 30
 COLLISION_PENALTY = -50
 STALL_STEPS_NORM = 200
 DIST_NORM = 7.07   # [m] distance normalisation, fixed so models transfer between scenes (= old 10x0.5 diagonal)
+N_EXTRA_INPUTS = 7  # inputs after the LiDAR rays: v, omega, distance, sin, cos, gap_from_best, stall
+VISIT_NORM = 3      # visits of a cell at which its visit-map input reaches 1 (1 visit -> 0.33)
 
+
+def visit_map_size(n_inputs: int, n_rays: int = 36) -> int:
+    """Side of the visit-map window of a model with n_inputs observation inputs (0 = no visit map).
+
+    Used by the benchmark / player / training to build the env that fits a saved model.
+    Older models with fewer inputs (41, 42) also give 0.
+    """
+    extra = n_inputs - n_rays - N_EXTRA_INPUTS
+    if extra <= 0:
+        return 0
+    side = int(round(extra ** 0.5))
+    if side * side != extra:
+        raise ValueError(f"{n_inputs} inputs don't fit {n_rays} rays + a square visit map")
+    return side
 
 
 class NavEnv(gym.Env):
     """Robot has to reach the goal without hitting walls.
 
     Action:      [v, omega] in [-1, 1], scaled to the robot's max speed / max turn rate.
-    Observation: [lidar scans, v, omega, dist_to_goal, sin(angle_to_goal), cos(angle_to_goal), gap_from_best, steps_since_record]
+    Observation: [lidar scans, v, omega, dist_to_goal, sin(angle_to_goal), cos(angle_to_goal), gap_from_best, steps_since_record,
+                  visit map (only with visit_map > 0)]
+
+    Visit map (memory, visit_map = window side k, e.g. 5): the env counts how many times the robot
+    ENTERED every grid cell in this episode (from the robot's own position, no map information).
+    The policy gets a k x k window of these counts around the robot, turned with the robot
+    (row 0 = farthest ahead, column 0 = farthest left, the robot in the middle), each count
+    divided by VISIT_NORM and capped at 1. Cells outside the arena are 0.
+    It is ONLY an input: there is no reward or penalty for visiting cells.
     """
 
     metadata = {"render_modes": []}
@@ -52,8 +76,11 @@ class NavEnv(gym.Env):
     def __init__(self, scene: Path = MODEL_DIR / "scene_grid.xml",
                  mode: str | tuple[str, ...] = "random", n_obstacles: int | tuple[int, int] = 3,
                  min_dist_cells: int = 2, max_steps: int = MAX_EPISODE_STEPS,
-                 n_rays: int = 36, fov_deg: float = 360.0):
+                 n_rays: int = 36, fov_deg: float = 360.0, visit_map: int = 0):
         super().__init__()
+        if visit_map < 0 or (visit_map > 0 and visit_map % 2 == 0):
+            raise ValueError("visit_map must be 0 (off) or an odd window side (3, 5, 7, ...)")
+        self.visit_map = visit_map
         self.model = mujoco.MjModel.from_xml_path(str(scene))
         self.data = mujoco.MjData(self.model)
 
@@ -89,9 +116,10 @@ class NavEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
 
         # Observation size and bounds to match what _get_obs returns
-        obs_size = n_rays  + 3 + 2 + 1 + 1 # n_rays + distance from goal + sin(a) + cos(a) + robot velocity 
+        obs_size = n_rays  + 3 + 2 + 1 + 1 # n_rays + distance from goal + sin(a) + cos(a) + robot velocity
                                         # + robot angle velocity + gap from the best distance
                                         # + how long no progrss
+        obs_size += visit_map * visit_map   # visit map window, appended at the END (old inputs keep their index)
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(obs_size,), dtype=np.float32)
 
         # Episode state, filled in reset()
@@ -102,8 +130,15 @@ class NavEnv(gym.Env):
         self.last_scan = np.zeros(n_rays)
         self.outcome = None
         self.min_obstacle_dist = MAX_RANGE  # distance to the closest obstacle, updated in step()
-        self.collided = False 
+        self.collided = False
         self.steps_since_record = 0
+        # memory: how many times the robot entered each grid cell [row, col] in this episode
+        self.visits = np.zeros((self.placer.grid_size, self.placer.grid_size), dtype=np.int32)
+        self.robot_cell = None
+        # window offsets in the robot frame [m]: row 0 = farthest ahead, column 0 = farthest left
+        half = visit_map // 2
+        ahead, left = np.meshgrid(np.arange(half, -half - 1, -1), np.arange(half, -half - 1, -1), indexing="ij")
+        self.visit_offsets = np.stack([ahead.ravel(), left.ravel()], axis=1) * self.placer.cell_size
 
 
     # -------------------------- Gymnasium API -------------------------------------------
@@ -128,6 +163,9 @@ class NavEnv(gym.Env):
         # map info used ONLY in the reward, the policy never sees it
         self.goal_bfs = bfs_distances(self.layout.grid, self.layout.goal)
         self.best_path_dist = self._path_dist()
+        self.visits[:] = 0
+        self.robot_cell = None
+        self._update_visits()   # the start cell counts as the first visit
 
         return self._get_obs(), self._get_info()
 
@@ -139,6 +177,7 @@ class NavEnv(gym.Env):
             if self._touching_obstacle():
                 self.collided = True
         self.steps += 1
+        self._update_visits()
 
         obs = self._get_obs()
         reward = self._compute_reward()
@@ -200,7 +239,30 @@ class NavEnv(gym.Env):
         omega = self.controller.wheel_radius * (w_right_omega - w_left_omega) / self.controller.wheel_separation
         v = v / self.controller.max_speed
         omega = omega / self.controller.max_turn
-        return np.concatenate([lidar_scan,[v, omega], [normalized_distance, sin, cos, gap_from_best, stall]]).astype(np.float32)
+        return np.concatenate([lidar_scan,[v, omega], [normalized_distance, sin, cos, gap_from_best, stall],
+                               self._visit_window()]).astype(np.float32)
+
+    def _update_visits(self) -> None:
+        """Count a visit when the robot enters a new cell (staying in a cell is not a new visit)."""
+        cell = self._cell_of(self._robot_pose()[0])
+        if cell is not None and cell != self.robot_cell:
+            self.visits[cell] += 1
+            self.robot_cell = cell
+
+    def _visit_window(self) -> np.ndarray:
+        """visit_map x visit_map visit counts around the robot, turned with the robot, in [0, 1] (flattened)."""
+        if self.visit_map == 0:
+            return np.zeros(0)
+        xy, yaw = self._robot_pose()
+        c, s = np.cos(yaw), np.sin(yaw)
+        ahead, left = self.visit_offsets[:, 0], self.visit_offsets[:, 1]
+        points = xy + np.stack([c * ahead - s * left, s * ahead + c * left], axis=1)   # robot frame -> world
+        window = np.zeros(len(points))
+        for i, p in enumerate(points):
+            cell = self._cell_of(p)
+            if cell is not None:
+                window[i] = min(self.visits[cell] / VISIT_NORM, 1.0)
+        return window
 
     def _compute_reward(self) -> float:
         """Reward for the last step."""
@@ -281,6 +343,15 @@ class NavEnv(gym.Env):
 
 
     # ----------------------- small utilities -------------------------------------------
+
+    def _cell_of(self, xy: np.ndarray) -> tuple[int, int] | None:
+        """Grid cell (row, col) of a world point, None outside the arena (same indexing as layout.grid)."""
+        cs, n = self.placer.cell_size, self.placer.grid_size
+        half = n * cs / 2
+        col, row = int((xy[0] + half) // cs), int((xy[1] + half) // cs)
+        if 0 <= row < n and 0 <= col < n:
+            return row, col
+        return None
 
     def _robot_pose(self) -> tuple[np.ndarray, float]:
         """Robot (x, y) of the body origin and yaw [rad] in the world frame."""

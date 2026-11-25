@@ -25,7 +25,7 @@ import mujoco.viewer
 from stable_baselines3 import PPO
 
 from tb3_nav.layout_generator import MODES
-from tb3_nav.nav_env import FRAME_SKIP, NavEnv
+from tb3_nav.nav_env import FRAME_SKIP, NavEnv, visit_map_size
 from tb3_nav.show_layout import draw_rays
 from tb3_nav.train_ppo import RUNS_DIR, STAGES
 
@@ -78,7 +78,7 @@ def main() -> None:
     stage = dict(STAGES[args.stage])
     if args.mode is not None:
         stage["mode"] = args.mode
-    env = NavEnv(**stage)
+    env = NavEnv(**stage, visit_map=visit_map_size(model.observation_space.shape[0]))
     print(f"Stage {args.stage}: {stage}")
 
     # The key callback runs in the viewer's thread, so it only sets flags for the main loop

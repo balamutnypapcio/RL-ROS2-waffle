@@ -28,8 +28,9 @@ from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback,
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
+from tb3_nav.expand_model import expand_model
 from tb3_nav.make_scene import ROOT
-from tb3_nav.nav_env import NavEnv
+from tb3_nav.nav_env import NavEnv, visit_map_size
 from tb3_nav.plot_run import plot_run
 
 RUNS_DIR = ROOT / "runs"
@@ -99,6 +100,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stage", type=int, default=None,
                         help="train the whole run on this one curriculum stage (index into STAGES, -1 = last), "
                              "no stage changes; useful for short fine-tuning runs")
+    parser.add_argument("--visit-map", type=int, default=None,
+                        help="memory: visit-map window side (odd, e.g. 5; 0 = off). Default: off for a new model, "
+                             "the same as --init-model when continuing. A model without visit map given with "
+                             "--init-model is expanded first (new inputs with weight 0, see expand_model.py)")
     # PPO hyperparameters: override PPO_KWARGS (new model) or the values stored in --init-model
     ppo = parser.add_argument_group("PPO hyperparameters (default: PPO_KWARGS, or the values in --init-model)")
     for name, typ in PPO_OVERRIDES.items():
@@ -188,15 +193,31 @@ def main() -> None:
         stages, stage_starts = STAGES, STAGE_STARTS
     overrides = {k: getattr(args, k) for k in PPO_OVERRIDES if getattr(args, k) is not None}
 
+    # Visit map (memory): the env must give the model exactly the inputs it was built for
+    init_model, visit_map = args.init_model, args.visit_map or 0
+    if init_model:
+        model_visit_map = visit_map_size(PPO.load(init_model, device="cpu").observation_space.shape[0])
+        if args.visit_map is None:
+            visit_map = model_visit_map
+        elif visit_map != model_visit_map:
+            if model_visit_map != 0:
+                raise SystemExit(f"{init_model} has a {model_visit_map}x{model_visit_map} visit map, "
+                                 f"can't change it to --visit-map {visit_map}")
+            init_model = run_dir / "init_model_expanded.zip"
+            expand_model(args.init_model, visit_map).save(init_model)
+            print(f"Expanded {args.init_model} with a {visit_map}x{visit_map} visit map -> {init_model}")
+    print(f"Visit map: {f'{visit_map}x{visit_map}' if visit_map else 'off'}")
+
     # Training envs: each in its own process (MuJoCo + Python LiDAR are CPU-bound).
     # make_vec_env wraps every env in a Monitor, so episode reward / length show up in the logs.
     vec_env_cls = SubprocVecEnv if args.n_envs > 1 else DummyVecEnv
     train_env = make_vec_env(NavEnv, n_envs=args.n_envs, seed=args.seed,
-                             env_kwargs=stages[0], vec_env_cls=vec_env_cls)
+                             env_kwargs={**stages[0], "visit_map": visit_map}, vec_env_cls=vec_env_cls)
 
     # Separate env for evaluation on the target task,
     # different seed so it sees other maps than training
-    eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000, env_kwargs=STAGES[-1])
+    eval_env = make_vec_env(NavEnv, n_envs=1, seed=args.seed + 1000,
+                            env_kwargs={**STAGES[-1], "visit_map": visit_map})
 
     # Callbacks count calls of env.step() on the VecEnv, one call = n_envs env steps,
     # so the frequencies are divided by n_envs to stay in env steps.
@@ -212,11 +233,11 @@ def main() -> None:
         EpisodeStatsCallback(window=STATS_WINDOW),
     ]
 
-    if args.init_model:
+    if init_model:
         # Continue: weights, optimizer state and the step counter come from the file.
         # PPO hyperparameters are also taken from the file (not from PPO_KWARGS),
         # except the ones given on the command line (set before the model is rebuilt).
-        model = PPO.load(args.init_model, env=train_env,
+        model = PPO.load(init_model, env=train_env,
                          tensorboard_log=str(run_dir / "tb"), verbose=1, **overrides)
         model.set_random_seed(args.seed)
     else:
@@ -227,12 +248,13 @@ def main() -> None:
     # "ppo" = the values the model really trains with, "ppo_overrides" = what was changed by hand.
     config = dict(args=vars(args), stages=stages, stage_starts=stage_starts,
                   stats_window=STATS_WINDOW, ppo=effective_ppo(model), ppo_overrides=overrides,
-                  start_timesteps=model.num_timesteps)
+                  start_timesteps=model.num_timesteps, visit_map=visit_map,
+                  expanded_init_model=init_model != args.init_model)
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, default=str))
     print(f"PPO: {config['ppo']}  (changed: {overrides or 'nothing'})")
 
     model.learn(total_timesteps=args.timesteps, callback=callbacks, progress_bar=False,
-                reset_num_timesteps=args.init_model is None)
+                reset_num_timesteps=init_model is None)
     model.save(run_dir / "final_model")
     print(f"Saved: {run_dir / 'final_model.zip'}")
 
